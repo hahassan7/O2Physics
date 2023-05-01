@@ -22,6 +22,7 @@
 #include <numeric>
 #include <tuple>
 #include <vector>
+#include <string>
 
 #include "fastjet/PseudoJet.hh"
 #include "fastjet/Selector.hh"
