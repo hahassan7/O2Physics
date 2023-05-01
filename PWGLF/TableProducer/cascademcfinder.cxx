@@ -253,18 +253,18 @@ struct cascademcfinder {
               histos.fill(HIST("hPtOmegaPlusGlobalWithPV"), mcParticle.pt());
           }
         }
-          }
-        }
+      }
+    }
 
-        // sort according to collision ID
-        auto sortedIndices = sort_indices(casccollisionId);
+    // sort according to collision ID
+    auto sortedIndices = sort_indices(casccollisionId);
 
-        // V0 list established, populate
-        for (auto ic : sortedIndices) {
-          if (casccollisionId[ic] >= 0) {
-            cascades(casccollisionId[ic], cascv0Index[ic], cascbachelorIndex[ic]);
-          }
-        }
+    // V0 list established, populate
+    for (auto ic : sortedIndices) {
+      if (casccollisionId[ic] >= 0) {
+        cascades(casccollisionId[ic], cascv0Index[ic], cascbachelorIndex[ic]);
+      }
+    }
       }
 };
 
