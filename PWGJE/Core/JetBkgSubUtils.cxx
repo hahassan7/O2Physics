@@ -13,6 +13,7 @@
 //
 // Author: Hadi Hassan, Universiy of Jväskylä, hadi.hassan@cern.ch
 #include <memory>
+#include <tuple>
 #include "Framework/Logger.h"
 #include "Common/Core/RecoDecay.h"
 #include "PWGJE/Core/JetUtilities.h"

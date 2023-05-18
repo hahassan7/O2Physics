@@ -134,6 +134,6 @@ void fillClusters(const T& constituent, std::vector<fastjet::PseudoJet>& constit
   setFastJetUserInfo(constituents, index, status);
 }
 
-};     // namespace FastJetUtilities
+}; // namespace FastJetUtilities
 
 #endif // PWGJE_CORE_FASTJETUTILITIES_H_

@@ -19,6 +19,7 @@
 
 #include <string>
 #include <memory>
+#include <tuple>
 #include <vector>
 #include <TMath.h>
 
@@ -143,6 +144,6 @@ class JetBkgSubUtils
   fastjet::AreaDefinition areaDefBkg = fastjet::AreaDefinition(fastjet::active_area_explicit_ghosts, ghostAreaSpec);
   fastjet::Selector selRho = fastjet::Selector();
 
-};     // class JetBkgSubUtils
+}; // class JetBkgSubUtils
 
 #endif // PWGJE_CORE_JETBKGSUBUTILS_H_
