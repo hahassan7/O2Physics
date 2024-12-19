@@ -47,7 +47,6 @@ struct HeavyFlavourDefinitionTask {
   using JetTracksMCD = soa::Join<aod::JetTracksMCD, aod::JTrackExtras, aod::JTrackPIs>;
   Preslice<aod::JetParticles> particlesPerCollision = aod::jmcparticle::mcCollisionId;
 
-  HistogramRegistry registry{"registry", {}, OutputObjHandlingPolicy::AnalysisObject};
   void init(InitContext const&)
   {
   }
@@ -60,7 +59,7 @@ struct HeavyFlavourDefinitionTask {
   void processMCD(aod::JetCollision const& /*collision*/, JetTableMCD const& mcdjets, JetTracksMCD const& jtracks, aod::JetParticles const& particles)
   {
     for (auto const& mcdjet : mcdjets) {
-      int origin = jettaggingutilities::mcdJetFromHFShower(mcdjet, jtracks, particles, maxDeltaR, searchUpToQuark);
+      int8_t origin = jettaggingutilities::mcdJetFromHFShower(mcdjet, jtracks, particles, maxDeltaR, searchUpToQuark);
       flavourTableMCD(origin);
     }
   }
@@ -70,7 +69,7 @@ struct HeavyFlavourDefinitionTask {
   {
     for (auto const& mcdjet : mcdjets) {
       auto const particlesPerColl = particles.sliceBy(particlesPerCollision, collision.mcCollisionId());
-      int origin = -1;
+      int8_t origin = -1;
       for (auto const& mcpjet : mcdjet.template matchedJetGeo_as<soa::Join<JetTableMCP, aod::ChargedMCParticleLevelJetsMatchedToChargedMCDetectorLevelJets>>()) {
         if (searchUpToQuark) {
           origin = jettaggingutilities::getJetFlavor(mcpjet, particlesPerColl);
@@ -86,21 +85,20 @@ struct HeavyFlavourDefinitionTask {
   void processMCP(JetTableMCP const& mcpjets, aod::JetParticles const& particles)
   {
     for (auto const& mcpjet : mcpjets) {
-      int origin = jettaggingutilities::mcpJetFromHFShower(mcpjet, particles, maxDeltaR, searchUpToQuark);
+      int8_t origin = jettaggingutilities::mcpJetFromHFShower(mcpjet, particles, maxDeltaR, searchUpToQuark);
       flavourTableMCP(origin);
     }
   }
   PROCESS_SWITCH(HeavyFlavourDefinitionTask, processMCP, "Fill definition of flavour for mcp jets", true);
 
-  void processMCPRun2(JetTableMCP const& mcpjets, aod::JetParticles const& particles)
+  void processMCPRun2(aod::JMcCollisions::iterator const& /*collision*/, JetTableMCP const& mcpjets, aod::JetParticles const& particles)
   {
     for (auto const& mcpjet : mcpjets) {
-      auto const particlesPerColl = particles.sliceBy(particlesPerCollision, mcpjet.mcCollisionId());
-      int origin = -1;
+      int8_t origin = -1;
       if (searchUpToQuark) {
-        origin = jettaggingutilities::getJetFlavor(mcpjet, particlesPerColl);
+        origin = jettaggingutilities::getJetFlavor(mcpjet, particles);
       } else {
-        origin = jettaggingutilities::getJetFlavorHadron(mcpjet, particlesPerColl);
+        origin = jettaggingutilities::getJetFlavorHadron(mcpjet, particles);
       }
       flavourTableMCP(origin);
     }
@@ -110,22 +108,14 @@ struct HeavyFlavourDefinitionTask {
 
 using JetFlavourDefCharged = HeavyFlavourDefinitionTask<soa::Join<aod::ChargedMCDetectorLevelJets, aod::ChargedMCDetectorLevelJetConstituents>, soa::Join<aod::ChargedMCParticleLevelJets, aod::ChargedMCParticleLevelJetConstituents>, aod::ChargedMCDetectorLevelJetFlavourDef, aod::ChargedMCParticleLevelJetFlavourDef>;
 using JetFlavourDefFull = HeavyFlavourDefinitionTask<soa::Join<aod::FullMCDetectorLevelJets, aod::FullMCDetectorLevelJetConstituents>, soa::Join<aod::FullMCParticleLevelJets, aod::FullMCParticleLevelJetConstituents>, aod::FullMCDetectorLevelJetFlavourDef, aod::FullMCParticleLevelJetFlavourDef>;
-// using JetTaggerhfNeutral = HeavyFlavourDefinitionTask<soa::Join<aod::NeutralMCDetectorLevelJets, aod::NeutralMCDetectorLevelJetConstituents>, aod::NeutralMCDetectorLevelJetTags, aod::NeutralMCParticleLevelJetFlavourDef>;
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
 
   std::vector<o2::framework::DataProcessorSpec> tasks;
 
-  tasks.emplace_back(
-    adaptAnalysisTask<JetFlavourDefCharged>(cfgc));
+  tasks.emplace_back(adaptAnalysisTask<JetFlavourDefCharged>(cfgc, SetDefaultProcesses{}, TaskName{"jet-hfdefinition-charged"}));
+  tasks.emplace_back(adaptAnalysisTask<JetFlavourDefFull>(cfgc, SetDefaultProcesses{}, TaskName{"jet-hfdefinition-full"}));
 
-  tasks.emplace_back(
-    adaptAnalysisTask<JetFlavourDefFull>(cfgc));
-  /*
-    tasks.emplace_back(
-      adaptAnalysisTask<JetFlavourDefNeutral>(cfgc,
-                                                  SetDefaultProcesses{}));
-  */
   return WorkflowSpec{tasks};
 }

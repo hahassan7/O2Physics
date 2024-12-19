@@ -33,12 +33,11 @@ using namespace o2;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
 
-template <typename JetTableData, typename JetTableMCD, typename JetTableMCP, typename JetTaggingTableData, typename JetTaggingTableMCD, typename JetTaggingTableMCP>
+template <typename JetTableData, typename JetTableMCD, typename JetTaggingTableData, typename JetTaggingTableMCD>
 struct JetTaggerHFTask {
 
   Produces<JetTaggingTableData> taggingTableData;
   Produces<JetTaggingTableMCD> taggingTableMCD;
-  Produces<JetTaggingTableMCP> taggingTableMCP;
 
   // configuration topological cut for track and sv
   Configurable<float> trackDcaXYMax{"trackDcaXYMax", 1, "minimum DCA xy acceptance for tracks [cm]"};
@@ -50,11 +49,6 @@ struct JetTaggerHFTask {
   Configurable<float> prongChi2PCAMin{"prongChi2PCAMin", 4, "minimum Chi2 PCA of decay length of prongs"};
   Configurable<float> prongChi2PCAMax{"prongChi2PCAMax", 100, "maximum Chi2 PCA of decay length of prongs"};
   Configurable<float> svDispersionMax{"svDispersionMax", 1, "maximum dispersion of sv"};
-
-  // jet flavour definition
-  Configurable<float> maxDeltaR{"maxDeltaR", 0.25, "maximum distance of jet axis from flavour initiating parton"};
-  Configurable<bool> removeGluonShower{"removeGluonShower", true, "find jet origin removed gluon spliting"}; // true:: remove gluon spliting
-  Configurable<bool> searchUpToQuark{"searchUpToQuark", true, "Finding first mother in particles to quark"};
 
   // configuration about IP method
   Configurable<bool> useJetProb{"useJetProb", false, "fill table for track counting algorithm"};
@@ -76,17 +70,10 @@ struct JetTaggerHFTask {
 
   // axis spec
   ConfigurableAxis binTrackProbability{"binTrackProbability", {100, 0.f, 1.f}, ""};
-  ConfigurableAxis binJetFlavour{"binJetFlavour", {6, -0.5, 5.5}, ""};
 
   using JetTagTracksData = soa::Join<aod::JetTracks, aod::JTrackExtras, aod::JTrackPIs>;
   using JetTagTracksMCD = soa::Join<aod::JetTracksMCD, aod::JTrackExtras, aod::JTrackPIs>;
 
-  std::vector<float> vecParamsData;
-  std::vector<float> vecParamsIncJetMC;
-  std::vector<float> vecParamsCharmJetMC;
-  std::vector<float> vecParamsBeautyJetMC;
-  std::vector<float> vecParamsLfJetMC;
-  std::vector<float> jetProb;
   bool useResoFuncFromIncJet = false;
   int maxOrder = -1;
   int resoFuncMatch = 0;
@@ -95,6 +82,13 @@ struct JetTaggerHFTask {
   std::unique_ptr<TF1> fSignImpXYSigCharmJetMC = nullptr;
   std::unique_ptr<TF1> fSignImpXYSigBeautyJetMC = nullptr;
   std::unique_ptr<TF1> fSignImpXYSigLfJetMC = nullptr;
+
+  std::vector<int8_t> decisionIPs;
+  std::vector<int8_t> decisionIPs3D;
+  std::vector<int8_t> decisionSV;
+  std::vector<int8_t> decisionSV3D;
+  std::vector<float> scoreML;
+  std::vector<float> jetProb;
 
   template <typename T, typename U>
   void calculateJetProbability(int origin, T const& jet, U const& jtracks, std::vector<float>& jetProb, bool const& isMC = true)
@@ -164,6 +158,12 @@ struct JetTaggerHFTask {
   HistogramRegistry registry{"registry", {}, OutputObjHandlingPolicy::AnalysisObject};
   void init(InitContext const&)
   {
+    std::vector<float> vecParamsData;
+    std::vector<float> vecParamsIncJetMC;
+    std::vector<float> vecParamsCharmJetMC;
+    std::vector<float> vecParamsBeautyJetMC;
+    std::vector<float> vecParamsLfJetMC;
+
     maxOrder = numCount + 1; // 0: untagged, >1 : N ordering
 
     // Set up the resolution function
@@ -257,7 +257,7 @@ struct JetTaggerHFTask {
       if (jettaggingutilities::isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, true))
         flagtaggedjetIPxyz = true;
 
-      taggingTableData(0, jetProb, flagtaggedjetIP, flagtaggedjetIPxyz, flagtaggedjetSV, flagtaggedjetSVxyz);
+      taggingTableData(jetProb, flagtaggedjetIP, flagtaggedjetIPxyz, flagtaggedjetSV, flagtaggedjetSVxyz);
     }
   }
   PROCESS_SWITCH(JetTaggerHFTask, processData, "Fill tagging decision for data jets", false);
@@ -281,24 +281,19 @@ struct JetTaggerHFTask {
         flagtaggedjetIPxyz = true;
       flagtaggedjetSV = jettaggingutilities::isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, false, tagPointForSV);
       flagtaggedjetSVxyz = jettaggingutilities::isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyzMax, svDispersionMax, true, tagPointForSV);
-      taggingTableData(0, jetProb, flagtaggedjetIP, flagtaggedjetIPxyz, flagtaggedjetSV, flagtaggedjetSVxyz);
+      taggingTableData(jetProb, flagtaggedjetIP, flagtaggedjetIPxyz, flagtaggedjetSV, flagtaggedjetSVxyz);
     }
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDataWithSV, "Fill tagging decision for data jets", false);
 
-  void processMCD(aod::JetCollision const& /*collision*/, JetTableMCD const& mcdjets, JetTagTracksMCD const& jtracks, aod::JetParticles const& particles)
+  void processMCD(aod::JetCollision const& /*collision*/, soa::Join<JetTableMCD, aod::ChargedMCDetectorLevelJetFlavourDef> const& mcdjets, JetTagTracksMCD const& jtracks, aod::JetParticles const& particles)
   {
     for (auto& mcdjet : mcdjets) {
       bool flagtaggedjetIP = false;
       bool flagtaggedjetIPxyz = false;
       bool flagtaggedjetSV = false;
       bool flagtaggedjetSVxyz = false;
-      typename JetTagTracksMCD::iterator hftrack;
-      int origin = 0;
-      if (removeGluonShower)
-        origin = jettaggingutilities::mcdJetFromHFShower(mcdjet, jtracks, particles, maxDeltaR, searchUpToQuark);
-      else
-        origin = jettaggingutilities::jetTrackFromHFShower(mcdjet, jtracks, particles, hftrack, searchUpToQuark);
+      int origin = mcdjet.origin();
       if (useJetProb) {
         calculateJetProbability(origin, mcdjet, jtracks, jetProb);
         if (trackProbQA) {
@@ -309,24 +304,19 @@ struct JetTaggerHFTask {
         flagtaggedjetIP = true;
       if (jettaggingutilities::isGreaterThanTaggingPoint(mcdjet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, true))
         flagtaggedjetIPxyz = true;
-      taggingTableMCD(origin, jetProb, flagtaggedjetIP, flagtaggedjetIPxyz, flagtaggedjetSV, flagtaggedjetSVxyz);
+      taggingTableMCD(jetProb, flagtaggedjetIP, flagtaggedjetIPxyz, flagtaggedjetSV, flagtaggedjetSVxyz);
     }
   }
   PROCESS_SWITCH(JetTaggerHFTask, processMCD, "Fill tagging decision for mcd jets", false);
 
-  void processMCDWithSV(aod::JetCollision const& /*collision*/, soa::Join<JetTableMCD, aod::MCDSecondaryVertex3ProngIndices> const& mcdjets, JetTagTracksMCD const& jtracks, aod::MCDSecondaryVertex3Prongs const& prongs, aod::JetParticles const& particles)
+  void processMCDWithSV(aod::JetCollision const& /*collision*/, soa::Join<JetTableMCD, aod::ChargedMCDetectorLevelJetFlavourDef, aod::MCDSecondaryVertex3ProngIndices> const& mcdjets, JetTagTracksMCD const& jtracks, aod::MCDSecondaryVertex3Prongs const& prongs)
   {
     for (auto& mcdjet : mcdjets) {
       bool flagtaggedjetIP = false;
       bool flagtaggedjetIPxyz = false;
       bool flagtaggedjetSV = false;
       bool flagtaggedjetSVxyz = false;
-      typename JetTagTracksMCD::iterator hftrack;
-      int origin = 0;
-      if (removeGluonShower)
-        origin = jettaggingutilities::mcdJetFromHFShower(mcdjet, jtracks, particles, maxDeltaR, searchUpToQuark);
-      else
-        origin = jettaggingutilities::jetTrackFromHFShower(mcdjet, jtracks, particles, hftrack, searchUpToQuark);
+      int origin = mcdjet.origin();
       if (useJetProb) {
         calculateJetProbability(origin, mcdjet, jtracks, jetProb);
         if (trackProbQA) {
@@ -339,67 +329,34 @@ struct JetTaggerHFTask {
         flagtaggedjetIPxyz = true;
       flagtaggedjetSV = jettaggingutilities::isTaggedJetSV(mcdjet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, prongIPxyMin, prongIPxyMax, svDispersionMax, false, tagPointForSV);
       flagtaggedjetSVxyz = jettaggingutilities::isTaggedJetSV(mcdjet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyzMax, prongIPxyMin, prongIPxyMax, svDispersionMax, true, tagPointForSV);
-      taggingTableMCD(origin, jetProb, flagtaggedjetIP, flagtaggedjetIPxyz, flagtaggedjetSV, flagtaggedjetSVxyz);
+      taggingTableMCD(jetProb, flagtaggedjetIP, flagtaggedjetIPxyz, flagtaggedjetSV, flagtaggedjetSVxyz);
     }
   }
   PROCESS_SWITCH(JetTaggerHFTask, processMCDWithSV, "Fill tagging decision for mcd jets with sv", false);
 
-  void processMCP(aod::JetMcCollision const& /*collision*/, JetTableMCP const& mcpjets, aod::JetParticles const& particles)
-  {
-    for (auto& mcpjet : mcpjets) {
-      bool flagtaggedjetIP = false;
-      bool flagtaggedjetIPxyz = false;
-      bool flagtaggedjetSV = false;
-      bool flagtaggedjetSVxyz = false;
-      typename aod::JetParticles::iterator hfparticle;
-      int origin = 0;
-      // TODO
-      if (removeGluonShower) {
-        if (jettaggingutilities::mcpJetFromHFShower(mcpjet, particles, maxDeltaR, searchUpToQuark))
-          origin = jettaggingutilities::mcpJetFromHFShower(mcpjet, particles, maxDeltaR, searchUpToQuark);
-        else
-          origin = 0;
-      } else {
-        if (jettaggingutilities::jetParticleFromHFShower(mcpjet, particles, hfparticle, searchUpToQuark))
-          origin = jettaggingutilities::jetParticleFromHFShower(mcpjet, particles, hfparticle, searchUpToQuark);
-        else
-          origin = 0;
-      }
-      jetProb.clear();
-      jetProb.reserve(maxOrder);
-      jetProb.push_back(-1);
-      taggingTableMCP(origin, jetProb, flagtaggedjetIP, flagtaggedjetIPxyz, flagtaggedjetSV, flagtaggedjetSVxyz);
-    }
-  }
-  PROCESS_SWITCH(JetTaggerHFTask, processMCP, "Fill tagging decision for mcp jets with sv", false);
-
-  void processTraining(aod::JetCollision const& /*collision*/, JetTableMCD const& /*mcdjets*/, JetTagTracksMCD const& /*tracks*/)
+  void processDataAlgorithmML(aod::JetCollision const& /*collision*/, soa::Join<JetTableData, aod::DataSecondaryVertex3ProngIndices> const& /*allJets*/, JetTagTracksData const& /*allTracks*/, aod::DataSecondaryVertex3Prongs const& allSVs)
   {
     // To create table for ML
   }
-  PROCESS_SWITCH(JetTaggerHFTask, processTraining, "Fill tagging decision for mcd jets", false);
+  PROCESS_SWITCH(JetTaggerHFTask, processDataAlgorithmML, "Fill ML evaluation score for data jets", false);
+
+  void processMCDAlgorithmML(aod::JetCollision const& /*collision*/, soa::Join<JetTableMCD, aod::ChargedMCDetectorLevelJetFlavourDef, aod::MCDSecondaryVertex3ProngIndices> const& /*allJets*/, JetTagTracksMCD const& /*allTracks*/, aod::MCDSecondaryVertex3Prongs const& allSVs)
+  {
+    // To create table for ML
+  }
+  PROCESS_SWITCH(JetTaggerHFTask, processMCDAlgorithmML, "Fill ML evaluation score for MCD jets", false);
 };
 
-using JetTaggerChargedJets = JetTaggerHFTask<soa::Join<aod::ChargedJets, aod::ChargedJetConstituents>, soa::Join<aod::ChargedMCDetectorLevelJets, aod::ChargedMCDetectorLevelJetConstituents>, soa::Join<aod::ChargedMCParticleLevelJets, aod::ChargedMCParticleLevelJetConstituents>, aod::ChargedJetTags, aod::ChargedMCDetectorLevelJetTags, aod::ChargedMCParticleLevelJetTags>;
-using JetTaggerFullJets = JetTaggerHFTask<soa::Join<aod::FullJets, aod::FullJetConstituents>, soa::Join<aod::FullMCDetectorLevelJets, aod::FullMCDetectorLevelJetConstituents>, soa::Join<aod::FullMCParticleLevelJets, aod::FullMCParticleLevelJetConstituents>, aod::FullJetTags, aod::FullMCDetectorLevelJetTags, aod::FullMCParticleLevelJetTags>;
-// using JetTaggerNeutralJets = JetTaggerHFTask<soa::Join<aod::NeutralJets, aod::NeutralJetConstituents>,soa::Join<aod::NeutralMCDetectorLevelJets, aod::NeutralMCDetectorLevelJetConstituents>, aod::NeutralJetTags, aod::NeutralMCDetectorLevelJetTags>;
+using JetTaggerChargedJets = JetTaggerHFTask<soa::Join<aod::ChargedJets, aod::ChargedJetConstituents>, soa::Join<aod::ChargedMCDetectorLevelJets, aod::ChargedMCDetectorLevelJetConstituents>, aod::ChargedJetTags, aod::ChargedMCDetectorLevelJetTags>;
+using JetTaggerFullJets = JetTaggerHFTask<soa::Join<aod::FullJets, aod::FullJetConstituents>, soa::Join<aod::FullMCDetectorLevelJets, aod::FullMCDetectorLevelJetConstituents>, aod::FullJetTags, aod::FullMCDetectorLevelJetTags>;
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
 
   std::vector<o2::framework::DataProcessorSpec> tasks;
 
-  tasks.emplace_back(
-    adaptAnalysisTask<JetTaggerChargedJets>(cfgc,
-                                            SetDefaultProcesses{}, TaskName{"jet-taggerhf-charged"}));
+  tasks.emplace_back(adaptAnalysisTask<JetTaggerChargedJets>(cfgc, SetDefaultProcesses{}, TaskName{"jet-taggerhf-charged"}));
+  tasks.emplace_back(adaptAnalysisTask<JetTaggerFullJets>(cfgc, SetDefaultProcesses{}, TaskName{"jet-taggerhf-full"}));
 
-  tasks.emplace_back(
-    adaptAnalysisTask<JetTaggerFullJets>(cfgc,
-                                         SetDefaultProcesses{}, TaskName{"jet-taggerhf-full"}));
-  /*
-    tasks.emplace_back(
-      adaptAnalysisTask<JetTaggerNeutralJets>(cfgc,
-                                                  SetDefaultProcesses{}, TaskName{"jet-taggerhf-neutral"}));
-  */
   return WorkflowSpec{tasks};
 }
