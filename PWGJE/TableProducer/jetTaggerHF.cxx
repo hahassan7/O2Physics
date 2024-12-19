@@ -28,6 +28,7 @@
 #include "PWGJE/DataModel/JetTagging.h"
 #include "PWGJE/Core/JetTaggingUtilities.h"
 #include "PWGJE/Core/JetDerivedDataUtilities.h"
+#include "Tools/ML/MlResponse.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -35,6 +36,8 @@ using namespace o2::framework::expressions;
 
 template <typename JetTableData, typename JetTableMCD, typename JetTaggingTableData, typename JetTaggingTableMCD>
 struct JetTaggerHFTask {
+
+  static constexpr double DefaultCutsMl[1][2] = {{0.5, 0.5}};
 
   Produces<JetTaggingTableData> taggingTableData;
   Produces<JetTaggingTableMCD> taggingTableMCD;
@@ -68,8 +71,27 @@ struct JetTaggerHFTask {
   Configurable<float> tagPointForSV{"tagPointForSV", 40, "tagging working point for SV"};
   Configurable<float> tagPointForSVxyz{"tagPointForSVxyz", 40, "tagging working point for SV xyz"};
 
-  // axis spec
-  ConfigurableAxis binTrackProbability{"binTrackProbability", {100, 0.f, 1.f}, ""};
+  // ML configuration
+  Configurable<int> nJetConst{"nJetConst", 10, "maximum number of jet consistuents to be used for ML evaluation"};
+  Configurable<float> trackPtMin{"trackPtMin", 0.5, "minimum track pT"};
+  Configurable<float> svPtMin{"svPtMin", 0.5, "minimum SV pT"};
+
+  Configurable<float> svReductionFactor{"svReductionFactor", 1.0, "factor for how many SVs to keep"};
+
+  Configurable<std::vector<double>> binsPtMl{"binsPtMl", std::vector<double>{5., 1000.}, "pT bin limits for ML application"};
+  Configurable<std::vector<int>> cutDirMl{"cutDirMl", std::vector<int>{cuts_ml::CutSmaller, cuts_ml::CutNot}, "Whether to reject score values greater or smaller than the threshold"};
+  Configurable<LabeledArray<double>> cutsMl{"cutsMl", {DefaultCutsMl[0], 1, 2, {"pT bin 0"}, {"score for default b-jet tagging", "uncer 1"}}, "ML selections per pT bin"};
+  Configurable<int> nClassesMl{"nClassesMl", 2, "Number of classes in ML model"};
+  Configurable<std::vector<std::string>> namesInputFeatures{"namesInputFeatures", std::vector<std::string>{"feature1", "feature2"}, "Names of ML model input features"};
+
+  Configurable<std::string> ccdbUrl{"ccdbUrl", "http://alice-ccdb.cern.ch", "url of the ccdb repository"};
+  Configurable<std::vector<std::string>> modelPathsCCDB{"modelPathsCCDB", std::vector<std::string>{"Users/h/hahassan"}, "Paths of models on CCDB"};
+  Configurable<std::vector<std::string>> onnxFileNames{"onnxFileNames", std::vector<std::string>{"ML_bjets/Models/LHC24g4_70_200/model.onnx"}, "ONNX file names for each pT bin (if not from CCDB full path)"};
+  Configurable<int64_t> timestampCCDB{"timestampCCDB", -1, "timestamp of the ONNX file for ML model used to query in CCDB"};
+  Configurable<bool> loadModelsFromCCDB{"loadModelsFromCCDB", false, "Flag to enable or disable the loading of models from CCDB"};
+
+  o2::analysis::MlResponse<float> bMlResponse;
+  o2::ccdb::CcdbApi ccdbApi;
 
   using JetTagTracksData = soa::Join<aod::JetTracks, aod::JTrackExtras, aod::JTrackPIs>;
   using JetTagTracksMCD = soa::Join<aod::JetTracksMCD, aod::JTrackExtras, aod::JTrackPIs>;
@@ -232,6 +254,45 @@ struct JetTaggerHFTask {
         registry.add("h2_neg_track_probability_flavour", "negative track probability", {HistType::kTH2F, {{trackProbabilityAxis}, {jetFlavourAxis}}});
       }
     }
+
+    if (processDataAlgorithmML || processMCDAlgorithmML) {
+      bMlResponse.configure(binsPtMl, cutsMl, cutDirMl, nClassesMl);
+      if (loadModelsFromCCDB) {
+        ccdbApi.init(ccdbUrl);
+        bMlResponse.setModelPathsCCDB(onnxFileNames, ccdbApi, modelPathsCCDB, timestampCCDB);
+      } else {
+        bMlResponse.setModelPathsLocal(onnxFileNames);
+      }
+      // bMlResponse.cacheInputFeaturesIndices(namesInputFeatures);
+      bMlResponse.init();
+    }
+  }
+
+  template <typename AnyJets, typename AnyTracks, typename SecondaryVertices>
+  void analyzeJetAlgorithmML(AnyJets const& alljets, AnyTracks const& allTracks, SecondaryVertices const& allSVs)
+  {
+    for (const auto& analysisJet : alljets) {
+
+      std::vector<BJetTrackParams> tracksParams;
+      std::vector<BJetSVParams> svsParams;
+
+      analyzeJetSVInfo4ML(analysisJet, allTracks, allSVs, svsParams, svPtMin, svReductionFactor);
+      analyzeJetTrackInfo4ML(analysisJet, allTracks, allSVs, tracksParams, trackPtMin);
+
+      int nSVs = analysisJet.template secondaryVertices_as<aod::DataSecondaryVertex3Prongs>().size();
+
+      BJetParams jetparam = {analysisJet.pt(), analysisJet.eta(), analysisJet.phi(), static_cast<int>(tracksParams.size()), static_cast<int>(nSVs), analysisJet.mass()};
+      tracksParams.resize(nJetConst); // resize to the number of inputs of the ML
+      svsParams.resize(nJetConst);    // resize to the number of inputs of the ML
+
+      auto inputML = getInputsForML(jetparam, tracksParams, svsParams, nJetConst);
+
+      std::vector<float> output;
+      // bool isSelectedMl = bMlResponse.isSelectedMl(inputML, analysisJet.pt(), output);
+      bMlResponse.isSelectedMl(inputML, analysisJet.pt(), output);
+
+      scoreML[jet.globalIndex()] = output[0];
+    }
   }
 
   void processDummy(aod::JetCollisions const&)
@@ -334,15 +395,15 @@ struct JetTaggerHFTask {
   }
   PROCESS_SWITCH(JetTaggerHFTask, processMCDWithSV, "Fill tagging decision for mcd jets with sv", false);
 
-  void processDataAlgorithmML(aod::JetCollision const& /*collision*/, soa::Join<JetTableData, aod::DataSecondaryVertex3ProngIndices> const& /*allJets*/, JetTagTracksData const& /*allTracks*/, aod::DataSecondaryVertex3Prongs const& allSVs)
+  void processDataAlgorithmML(soa::Join<JetTableData, aod::DataSecondaryVertex3ProngIndices> const& allJets, JetTagTracksData const& allTracks, aod::DataSecondaryVertex3Prongs const& allSVs)
   {
-    // To create table for ML
+    analyzeJetAlgorithmML(alljets, allTracks, allSVs);
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDataAlgorithmML, "Fill ML evaluation score for data jets", false);
 
-  void processMCDAlgorithmML(aod::JetCollision const& /*collision*/, soa::Join<JetTableMCD, aod::ChargedMCDetectorLevelJetFlavourDef, aod::MCDSecondaryVertex3ProngIndices> const& /*allJets*/, JetTagTracksMCD const& /*allTracks*/, aod::MCDSecondaryVertex3Prongs const& allSVs)
+  void processMCDAlgorithmML(soa::Join<JetTableMCD, aod::MCDSecondaryVertex3ProngIndices> const& allJets, JetTagTracksMCD const& allTracks, aod::MCDSecondaryVertex3Prongs const& allSVs)
   {
-    // To create table for ML
+    analyzeJetAlgorithmML(alljets, allTracks, allSVs);
   }
   PROCESS_SWITCH(JetTaggerHFTask, processMCDAlgorithmML, "Fill ML evaluation score for MCD jets", false);
 };

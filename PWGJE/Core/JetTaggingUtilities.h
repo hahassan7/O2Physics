@@ -48,6 +48,44 @@ namespace jettaggingutilities
 {
 const int cmTomum = 10000; // using cm -> #mum for impact parameter (dca)
 
+struct BJetParams {
+  float mJetpT = 0.0;
+  float mJetEta = 0.0;
+  float mJetPhi = 0.0;
+  int mNTracks = -1;
+  int mNSV = -1;
+  float mJetMass = 0.0;
+};
+
+struct BJetTrackParams {
+  double mTrackpT = 0.0;
+  double mTrackEta = 0.0;
+  double mDotProdTrackJet = 0.0;
+  double mDotProdTrackJetOverJet = 0.0;
+  double mDeltaRJetTrack = 0.0;
+  double mSignedIP2D = 0.0;
+  double mSignedIP2DSign = 0.0;
+  double mSignedIP3D = 0.0;
+  double mSignedIP3DSign = 0.0;
+  double mMomFraction = 0.0;
+  double mDeltaRTrackVertex = 0.0;
+};
+
+struct BJetSVParams {
+  double mSVpT = 0.0;
+  double mDeltaRSVJet = 0.0;
+  double mSVMass = 0.0;
+  double mSVfE = 0.0;
+  double mIPXY = 0.0;
+  double mCPA = 0.0;
+  double mChi2PCA = 0.0;
+  double mDispersion = 0.0;
+  double mDecayLength2D = 0.0;
+  double mDecayLength2DError = 0.0;
+  double mDecayLength3D = 0.0;
+  double mDecayLength3DError = 0.0;
+};
+
 //________________________________________________________________________
 bool isBHadron(int pc)
 {
@@ -802,6 +840,113 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
   return n_vertices;
 }
 
+std::vector<std::vector<float>> getInputsForML(BJetParams jetparams, std::vector<BJetTrackParams>& tracksParams, std::vector<BJetSVParams>& svsParams, int maxJetConst = 10)
+{
+  std::vector<float> jetInput = {jetparams.mJetpT, jetparams.mJetEta, jetparams.mJetPhi, static_cast<float>(jetparams.mNTracks), static_cast<float>(jetparams.mNSV), jetparams.mJetMass};
+  std::vector<float> tracksInputFlat;
+  std::vector<float> svsInputFlat;
+
+  for (int iconstit = 0; iconstit < maxJetConst; iconstit++) {
+
+    tracksInputFlat.push_back(tracksParams[iconstit].mTrackpT);
+    tracksInputFlat.push_back(tracksParams[iconstit].mTrackEta);
+    tracksInputFlat.push_back(tracksParams[iconstit].mDotProdTrackJet);
+    tracksInputFlat.push_back(tracksParams[iconstit].mDotProdTrackJetOverJet);
+    tracksInputFlat.push_back(tracksParams[iconstit].mDeltaRJetTrack);
+    tracksInputFlat.push_back(tracksParams[iconstit].mSignedIP2D);
+    tracksInputFlat.push_back(tracksParams[iconstit].mSignedIP2DSign);
+    tracksInputFlat.push_back(tracksParams[iconstit].mSignedIP3D);
+    tracksInputFlat.push_back(tracksParams[iconstit].mSignedIP3DSign);
+    tracksInputFlat.push_back(tracksParams[iconstit].mMomFraction);
+    tracksInputFlat.push_back(tracksParams[iconstit].mDeltaRTrackVertex);
+
+    svsInputFlat.push_back(svsParams[iconstit].mSVpT);
+    svsInputFlat.push_back(svsParams[iconstit].mDeltaRSVJet);
+    svsInputFlat.push_back(svsParams[iconstit].mSVMass);
+    svsInputFlat.push_back(svsParams[iconstit].mSVfE);
+    svsInputFlat.push_back(svsParams[iconstit].mIPXY);
+    svsInputFlat.push_back(svsParams[iconstit].mCPA);
+    svsInputFlat.push_back(svsParams[iconstit].mChi2PCA);
+    svsInputFlat.push_back(svsParams[iconstit].mDispersion);
+    svsInputFlat.push_back(svsParams[iconstit].mDecayLength2D);
+    svsInputFlat.push_back(svsParams[iconstit].mDecayLength2DError);
+    svsInputFlat.push_back(svsParams[iconstit].mDecayLength3D);
+    svsInputFlat.push_back(svsParams[iconstit].mDecayLength3DError);
+  }
+
+  std::vector<std::vector<float>> totalInput;
+  totalInput.push_back(jetInput);
+  totalInput.push_back(tracksInputFlat);
+  totalInput.push_back(svsInputFlat);
+
+  return totalInput;
+}
+
+// Looping over the SV info and putting them in the input vector
+template <typename AnalysisJet, typename AnyTracks, typename SecondaryVertices>
+void analyzeJetSVInfo4ML(AnalysisJet const& myJet, AnyTracks const& /*allTracks*/, SecondaryVertices const& /*allSVs*/, std::vector<BJetSVParams>& svsParams, float svPtMin = 1.0, int svReductionFactor = 3)
+{
+  using SVType = typename SecondaryVertices::iterator;
+
+  // Min-heap to store the top 30 SVs by decayLengthXY/errorDecayLengthXY
+  auto compare = [](SVType& sv1, SVType& sv2) {
+    return (sv1.decayLengthXY() / sv1.errorDecayLengthXY()) > (sv2.decayLengthXY() / sv2.errorDecayLengthXY());
+  };
+
+  auto svs = myJet.template secondaryVertices_as<SecondaryVertices>();
+
+  // Sort the SVs based on their decay length significance in descending order
+  // This is needed in order to select longest SVs since some jets could have thousands of SVs
+  std::sort(svs.begin(), svs.end(), compare);
+
+  for (const auto& candSV : svs) {
+
+    if (candSV.pt() < svPtMin) {
+      continue;
+    }
+
+    double deltaRJetSV = jetutilities::deltaR(myJet, candSV);
+    double massSV = candSV.m();
+    double energySV = candSV.e();
+
+    if (svsParams.size() < (svReductionFactor * myJet.template tracks_as<AnyTracks>().size())) {
+      svsParams.emplace_back(BJetSVParams{candSV.pt(), deltaRJetSV, massSV, energySV / myJet.energy(), candSV.impactParameterXY(), candSV.cpa(), candSV.chi2PCA(), candSV.dispersion(), candSV.decayLengthXY(), candSV.errorDecayLengthXY(), candSV.decayLength(), candSV.errorDecayLength()});
+    }
+  }
+}
+
+// Looping over the track info and putting them in the input vector
+template <typename AnalysisJet, typename AnyTracks, typename SecondaryVertices>
+void analyzeJetTrackInfo4ML(AnalysisJet const& analysisJet, AnyTracks const& /*allTracks*/, SecondaryVertices const& /*allSVs*/, std::vector<BJetTrackParams>& tracksParams, float trackPtMin = 0.5)
+{
+  for (const auto& constituent : analysisJet.template tracks_as<AnyTracks>()) {
+
+    if (constituent.pt() < trackPtMin) {
+      continue;
+    }
+
+    double deltaRJetTrack = jetutilities::deltaR(analysisJet, constituent);
+    double dotProduct = RecoDecay::dotProd(std::array<float, 3>{analysisJet.px(), analysisJet.py(), analysisJet.pz()}, std::array<float, 3>{constituent.px(), constituent.py(), constituent.pz()});
+    int sign = jettaggingutilities::getGeoSign(analysisJet, constituent);
+
+    float rClosestSV = 10.;
+    for (const auto& candSV : analysisJet.template secondaryVertices_as<SecondaryVertices>()) {
+      double deltaRTrackSV = jetutilities::deltaR(constituent, candSV);
+      if (deltaRTrackSV < rClosestSV) {
+        rClosestSV = deltaRTrackSV;
+      }
+    }
+
+    tracksParams.emplace_back(BJetTrackParams{constituent.pt(), constituent.eta(), dotProduct, dotProduct / analysisJet.p(), deltaRJetTrack, std::abs(constituent.dcaXY()) * sign, constituent.sigmadcaXY(), std::abs(constituent.dcaXYZ()) * sign, constituent.sigmadcaXYZ(), constituent.p() / analysisJet.p(), rClosestSV});
+  }
+
+  auto compare = [](BJetTrackParams& tr1, BJetTrackParams& tr2) {
+    return (tr1.mSignedIP2D / tr1.mSignedIP2DSign) > (tr2.mSignedIP2D / tr2.mSignedIP2DSign);
+  };
+
+  // Sort the tracks based on their IP significance in descending order
+  std::sort(tracksParams.begin(), tracksParams.end(), compare);
+}
 }; // namespace jettaggingutilities
 
 #endif // PWGJE_CORE_JETTAGGINGUTILITIES_H_
