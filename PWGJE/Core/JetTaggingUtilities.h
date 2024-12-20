@@ -806,7 +806,7 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
     std::vector<std::pair<int, float>> sortedIndices(avgDistances.begin(), avgDistances.end());
     std::sort(sortedIndices.begin(), sortedIndices.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
     int rank = 1;
-    for (const auto& [idx, avgDistance] : sortedIndices) {
+    for (auto& [idx, avgDistance] : sortedIndices) {
       bool found = false;
       for (int t = 0; t < n_trks; t++)
         if (tempTrkVtxIndex[t] == idx) {
