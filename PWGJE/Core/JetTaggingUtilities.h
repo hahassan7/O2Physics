@@ -798,7 +798,7 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
 
   trkLabels["trkVtxIndex"] = std::vector<int>(n_trks, -1);
   if (count.size() != 0) { // If there is any SV cluster not only PV cluster
-    for (auto const& [idx, avgDistance] : avgDistances)
+    for (auto& [idx, avgDistance] : avgDistances)
       avgDistance /= count[idx];
 
     n_vertices += avgDistances.size();
@@ -806,7 +806,7 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
     std::vector<std::pair<int, float>> sortedIndices(avgDistances.begin(), avgDistances.end());
     std::sort(sortedIndices.begin(), sortedIndices.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
     int rank = 1;
-    for (auto& [idx, avgDistance] : sortedIndices) {
+    for (auto const& [idx, avgDistance] : sortedIndices) {
       bool found = false;
       for (int t = 0; t < n_trks; t++)
         if (tempTrkVtxIndex[t] == idx) {
