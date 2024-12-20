@@ -176,7 +176,7 @@ int jetTrackFromHFShower(T const& jet, U const& /*tracks*/, V const& particles, 
 
   bool hasMcParticle = false;
   int origin = -1;
-  for (auto& track : jet.template tracks_as<U>()) {
+  for (auto const& track : jet.template tracks_as<U>()) {
     hftrack = track; // for init if origin is 1 or 2, the track is not hftrack
     if (!track.has_mcParticle()) {
       continue;
@@ -322,7 +322,7 @@ int jetOrigin(T const& jet, U const& particles, float dRMax = 0.25)
   bool firstPartonFound = false;
   typename U::iterator parton1;
   typename U::iterator parton2;
-  for (auto& particle : particles) {
+  for (auto const& particle : particles) {
     if (std::abs(particle.getGenStatusCode() == 23)) {
       if (!firstPartonFound) {
         parton1 = particle;
@@ -358,15 +358,15 @@ template <typename AnyJet, typename AllMCParticles>
 int16_t getJetFlavor(AnyJet const& jet, AllMCParticles const& mcparticles)
 {
   bool charmQuark = false;
-  for (auto& mcpart : mcparticles) {
+  for (auto const& mcpart : mcparticles) {
     int pdgcode = mcpart.pdgCode();
-    if (TMath::Abs(pdgcode) == 21 || (TMath::Abs(pdgcode) >= 1 && TMath::Abs(pdgcode) <= 5)) {
+    if (std::abs(pdgcode) == 21 || (std::abs(pdgcode) >= 1 && std::abs(pdgcode) <= 5)) {
       double dR = jetutilities::deltaR(jet, mcpart);
 
       if (dR < jet.r() / 100.f) {
-        if (TMath::Abs(pdgcode) == 5) {
+        if (std::abs(pdgcode) == 5) {
           return JetTaggingSpecies::beauty; // Beauty jet
-        } else if (TMath::Abs(pdgcode) == 4) {
+        } else if (std::abs(pdgcode) == 4) {
           charmQuark = true;
         }
       }
@@ -391,7 +391,7 @@ int16_t getJetFlavorHadron(AnyJet const& jet, AllMCParticles const& mcparticles)
 {
   bool charmHadron = false;
 
-  for (auto& mcpart : mcparticles) {
+  for (auto const& mcpart : mcparticles) {
     int pdgcode = mcpart.pdgCode();
     if (isBHadron(pdgcode) || isCHadron(pdgcode)) {
       double dR = jetutilities::deltaR(jet, mcpart);
@@ -490,7 +490,7 @@ int getGeoSign(T const& jet, U const& jtrack)
 template <typename T, typename U, typename Vec = std::vector<float>>
 void orderForIPJetTracks(T const& jet, U const& /*jtracks*/, float const& trackDcaXYMax, float const& trackDcaZMax, Vec& vecSignImpSig, bool useIPxyz)
 {
-  for (auto& jtrack : jet.template tracks_as<U>()) {
+  for (auto const& jtrack : jet.template tracks_as<U>()) {
     if (!trackAcceptanceWithDca(jtrack, trackDcaXYMax, trackDcaZMax))
       continue;
     auto geoSign = getGeoSign(jet, jtrack);
@@ -564,7 +564,7 @@ template <typename T, typename U>
 float getTrackProbability(T const& fResoFuncjet, U const& track, const float& minSignImpXYSig = -40)
 {
   float probTrack = 0;
-  auto varSignImpXYSig = TMath::Abs(track.dcaXY()) / track.sigmadcaXY();
+  auto varSignImpXYSig = std::abs(track.dcaXY()) / track.sigmadcaXY();
   if (-varSignImpXYSig < minSignImpXYSig)
     varSignImpXYSig = -minSignImpXYSig - 0.01; // To avoid overflow for integral
   probTrack = fResoFuncjet->Integral(minSignImpXYSig, -varSignImpXYSig) / fResoFuncjet->Integral(minSignImpXYSig, 0);
@@ -599,7 +599,7 @@ float getJetProbability(T const& fResoFuncjet, U const& jet, V const& jtracks, f
   std::vector<float> jetTracksPt;
   float trackjetProb = 1.;
 
-  for (auto& jtrack : jet.template tracks_as<V>()) {
+  for (auto const& jtrack : jet.template tracks_as<V>()) {
     if (!trackAcceptanceWithDca(jtrack, trackDcaXYMax, trackDcaZMax))
       continue;
 
@@ -612,17 +612,17 @@ float getJetProbability(T const& fResoFuncjet, U const& jet, V const& jtracks, f
     }
   }
 
-  float JP = -1.;
+  float jetProb = -1.;
   if (jetTracksPt.size() < 2)
     return -1;
 
   float sumjetProb = 0.;
   for (std::vector<float>::size_type i = 0; i < jetTracksPt.size(); i++) {
-    sumjetProb += (TMath::Power(-1 * TMath::Log(trackjetProb), static_cast<int>(i)) / TMath::Factorial(i));
+    sumjetProb += (std::pow(-1 * std::log(trackjetProb), static_cast<int>(i)) / TMath::Factorial(i));
   }
 
-  JP = trackjetProb * sumjetProb;
-  return JP;
+  jetProb = trackjetProb * sumjetProb;
+  return jetProb;
 }
 
 // For secaondy vertex method utilites
@@ -637,13 +637,13 @@ typename ProngType::iterator jetFromProngMaxDecayLength(const JetType& jet, floa
     if (!prongAcceptance(prong, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, prongIPxyMin, prongIPxyMax, doXYZ))
       continue;
     *checkSv = true;
-    float Sxy = -1.0f;
+    float sxy = -1.0f;
     if (!doXYZ) {
-      Sxy = prong.decayLengthXY() / prong.errorDecayLengthXY();
+      sxy = prong.decayLengthXY() / prong.errorDecayLengthXY();
     } else {
-      Sxy = prong.decayLength() / prong.errorDecayLength();
+      sxy = prong.decayLength() / prong.errorDecayLength();
     }
-    if (maxSxy < Sxy) {
+    if (maxSxy < sxy) {
       bjetCand = prong;
     }
   }
@@ -798,7 +798,7 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
 
   trkLabels["trkVtxIndex"] = std::vector<int>(n_trks, -1);
   if (count.size() != 0) { // If there is any SV cluster not only PV cluster
-    for (auto& [idx, avgDistance] : avgDistances)
+    for (auto const& [idx, avgDistance] : avgDistances)
       avgDistance /= count[idx];
 
     n_vertices += avgDistances.size();
@@ -824,7 +824,7 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
   // trkOrigin
 
   int trkIdx = 0;
-  for (auto& constituent : jet.template tracks_as<AnyTracks>()) {
+  for (auto const& constituent : jet.template tracks_as<AnyTracks>()) {
     if (!constituent.has_mcParticle() || !constituent.template mcParticle_as<AnyParticles>().isPhysicalPrimary() || constituent.pt() < trackPtMin) {
       trkLabels["trkOrigin"].push_back(0);
     } else {
