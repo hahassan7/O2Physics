@@ -299,7 +299,7 @@ struct JetTaggerHFTask {
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDummy, "Dummy process", true);
 
-  void processSetUpData(JetTable const& jets)
+  void processSetUp(JetTable const& jets)
   {
     decisionNonML.clear();
     decisionJP.clear();
@@ -308,6 +308,7 @@ struct JetTaggerHFTask {
     decisionJP.resize(jets.size());
     scoreML.resize(jets.size());
   }
+  PROCESS_SWITCH(JetTaggerHFTask, processSetup, "Setup initialization and size of jets for filling table", true);
 
   void processDataIP(aod::JetCollision const& /*collision*/, JetTable const& jets, JetTracksExt const& jtracks)
   {
