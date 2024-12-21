@@ -128,13 +128,13 @@ JETSV_TABLES_DEF(Charged, SecondaryVertex2Prong, "2PRONG");
   }                                                                \
   DECLARE_SOA_TABLE(_jet_type_##FlavourDef, "AOD", _description_ "FlavourDef", _name_##flavourdef::Origin);
 
-#define JETTAGGING_TABLE_DEF(_jet_type_, _name_, _description_)       \
-  namespace _name_##tagging                                           \
-  {                                                                   \
-    DECLARE_SOA_COLUMN(bitTaggedjetNonML, BitTaggedjetNonML, uint8_t);       \
-    DECLARE_SOA_COLUMN(JetProb, jetProb, std::vector<float>);                      \
-    DECLARE_SOA_COLUMN(ScoreJetML, scoreML, float);                   \
-  }                                                                   \
+#define JETTAGGING_TABLE_DEF(_jet_type_, _name_, _description_)        \
+  namespace _name_##tagging                                            \
+  {                                                                    \
+    DECLARE_SOA_COLUMN(bitTaggedjetNonML, BitTaggedjetNonML, uint8_t); \
+    DECLARE_SOA_COLUMN(JetProb, jetProb, std::vector<float>);          \
+    DECLARE_SOA_COLUMN(ScoreJetML, scoreML, float);                    \
+  }                                                                    \
   DECLARE_SOA_TABLE(_jet_type_##Tags, "AOD", _description_ "Tags", _name_##tagging::BitTaggedjetNonML, _name_##tagging::JetProb, _name_##tagging::ScoreJetML);
 
 #define JETTAGGING_TABLES_DEF(_jet_type_, _description_)                                                       \

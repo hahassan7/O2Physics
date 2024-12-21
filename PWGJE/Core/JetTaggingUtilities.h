@@ -51,7 +51,7 @@ enum TaggingMethodNonML {
   IPs = 0,
   IPs3D = 1,
   SV = 2,
-  SV3D =3
+  SV3D = 3
 };
 
 const int cmTomum = 10000; // using cm -> #mum for impact parameter (dca)
@@ -116,8 +116,8 @@ bool isCHadron(int pc)
   return (std::find(bPdG.begin(), bPdG.end(), std::abs(pc)) != bPdG.end());
 }
 
-template <typename T, typename U, typename V=float>
-uint8_t setTaggingIPBit(T const& jet, U const &jtracks, V const& trackDcaXYMax, V const& trackDcaZMax, V const& tagPointForIP, int const& minIPCount)
+template <typename T, typename U, typename V = float>
+uint8_t setTaggingIPBit(T const& jet, U const& jtracks, V const& trackDcaXYMax, V const& trackDcaZMax, V const& tagPointForIP, int const& minIPCount)
 {
   uint8_t bit = 0;
   if (isGreatherTanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, false)) {
@@ -129,8 +129,8 @@ uint8_t setTaggingIPBit(T const& jet, U const &jtracks, V const& trackDcaXYMax, 
   return bit;
 }
 
-template <typename T, typename U, typename V=float>
-uint8_t setTaggingSVBit(T const& jet, U const &prongs, V const& prongChi2PCAMax, V const& prongsigmaLxyMax, V const& svDispersionMax, V const& tagPointForSV)
+template <typename T, typename U, typename V = float>
+uint8_t setTaggingSVBit(T const& jet, U const& prongs, V const& prongChi2PCAMax, V const& prongsigmaLxyMax, V const& svDispersionMax, V const& tagPointForSV)
 {
   uint8_t bit = 0;
   if(isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, false, tagPointForSV) {
