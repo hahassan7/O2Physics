@@ -110,13 +110,9 @@ struct JetTaggerHFTask {
   std::unique_ptr<TF1> fSignImpXYSigBeautyJetMC = nullptr;
   std::unique_ptr<TF1> fSignImpXYSigLfJetMC = nullptr;
 
-  std::vector<int8_t> decisionIPs;
-  std::vector<int8_t> decisionIPs3D;
+  std::vector<uint8_t> decisionNonML;
   std::vector<std::vector<float>> decisionJP;
-  std::vector<int8_t> decisionSV;
-  std::vector<int8_t> decisionSV3D;
   std::vector<float> scoreML;
-
 
   template <typename T, typename U>
   void calculateJetProbability(int origin, T const& jet, U const& jtracks, std::vector<float>& jetProb, bool const& isMC = true)
@@ -308,58 +304,42 @@ struct JetTaggerHFTask {
 
   void processSetUpData(JetTableData const& jets)
   {
-    decisionIPs.resize(jets.size());
-    decisionIPs3D.resize(jets.size());
+    decisionNonML.clear();
+    decisionJP.clear();
+    scoreML.clear();
+    decisionNonML.resize(jets.size());
     decisionJP.resize(jets.size());
-
+    scoreML.resize(jets.size());
   }
+
   void processDataIP(aod::JetCollision const& /*collision*/, JetTableData const& jets, JetTagTracksData const& jtracks)
   {
-    decisionIPs.resize(jets.size());
-    decisionIPs3D.resize(jets.size());
-    decisionJP.resize(jets.size());
     for (auto& jet : jets) {
-      bool flagtaggedjetIPs = false;
-      bool flagtaggedjetIPs3D = false;
       if (useJetProb) {
         calculateJetProbability(0, jet, jtracks, jetProb, false);
         if (trackProbQA) {
           evaluateTrackProbQA(0, jet, jtracks, false);
         }
       }
-      flagtaggedjetIPs = jettaggingutilities::isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, false);
-      flagtaggedjetIPs3D = jettaggingutilities::isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, true);
-
-      decisionIPs[jet.globalIndex()] = flagtaggedjetIPs;
-      decisionIPs3D[jet.globalIndex()] = flagtaggedjetIPs3D;
       decisionJP[jet.globalIndex()] = jetProb;
+      uint8_t bit = jettaggingutilities::setTaggingIPBit(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount);
+      decisionNonML[jet.globalIndex()] |= bit;
     }
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDataIP, "Fill tagging decision for data jets", false);
 
   void processDataSV(aod::JetCollision const& /*collision*/, soa::Join<JetTableData, aod::DataSecondaryVertex3ProngIndices> const& jets, JetTagTracksData const& /*jtracks*/, aod::DataSecondaryVertex3Prongs const& prongs)
   {
-    decisionSV.resize(jets.size());
-    decisionSV3D.resize(jets.size());
-    for (auto& jet : jets) {
-      bool flagtaggedjetSV = false;
-      bool flagtaggedjetSV3D = false;
-      flagtaggedjetSV = jettaggingutilities::isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, false, tagPointForSV);
-      flagtaggedjetSV3D = jettaggingutilities::isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyzMax, svDispersionMax, true, tagPointForSV);
-      decisionSV[jet.globalIndex()] = flagtaggedjetSV;
-      decisionSV3D[jet.globalIndex()] = flagtaggedjetSV3D;
+    for (auto const& jet : jets) {
+      uint8_t bit = jettaggingutilities::setTaggingSVBit(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, tagPointForSV);
+      decisionNonML[jet.globalIndex()] |= bit;
     }
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDataSV, "Fill tagging decision for data jets", false);
 
   void processMCDIP(aod::JetCollision const& /*collision*/, soa::Join<JetTableMCD, aod::ChargedMCDetectorLevelJetFlavourDef> const& mcdjets, JetTagTracksMCD const& jtracks)
   {
-    decisionIPs.resize(mcdjets.size());
-    decisionIPs3D.resize(mcdjets.size());
-    decisionJP.resize(mcdjets.size());
     for (auto& mcdjet : mcdjets) {
-      bool flagtaggedjetIPs = false;
-      bool flagtaggedjetIPs3D = false;
       int origin = mcdjet.origin();
       if (useJetProb) {
         calculateJetProbability(origin, mcdjet, jtracks, jetProb);
@@ -367,53 +347,43 @@ struct JetTaggerHFTask {
           evaluateTrackProbQA(origin, mcdjet, jtracks);
         }
       }
-      flagtaggedjetIPs = jettaggingutilities::isGreaterThanTaggingPoint(mcdjet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, false);
-      flagtaggedjetIPs3D = jettaggingutilities::isGreaterThanTaggingPoint(mcdjet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, true);
-      decisionIPs[mcdjet.globalIndex()] = flagtaggedjetIPs;
-      decisionIPs3D[mcdjet.globalIndex()] = flagtaggedjetIPs3D;
       decisionJP[mcdjet.globalIndex()] = jetProb;
+      uint8_t bit = jettaggingutilities::setTaggingIPBit(mcdjet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount);
+      decisionNonML[mcdjet.globalIndex()] |= bit;
     }
   }
   PROCESS_SWITCH(JetTaggerHFTask, processMCDIP, "Fill tagging decision for mcd jets", false);
 
   void processMCDSV(aod::JetCollision const& /*collision*/, soa::Join<JetTableMCD, aod::MCDSecondaryVertex3ProngIndices> const& mcdjets, JetTagTracksMCD const& /*jtracks*/, aod::MCDSecondaryVertex3Prongs const& prongs)
   {
-    decisionSV.resize(mcdjets.size());
-    decisionSV3D.resize(mcdjets.size());
     for (auto& mcdjet : mcdjets) {
-      bool flagtaggedjetSV = false;
-      bool flagtaggedjetSV3D = false;
-      flagtaggedjetSV = jettaggingutilities::isTaggedJetSV(mcdjet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, prongIPxyMin, prongIPxyMax, svDispersionMax, false, tagPointForSV);
-      flagtaggedjetSV3D = jettaggingutilities::isTaggedJetSV(mcdjet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyzMax, prongIPxyMin, prongIPxyMax, svDispersionMax, true, tagPointForSV);
-      decisionSV[mcdjet.globalIndex()] = flagtaggedjetSV;
-      decisionSV3D[mcdjet.globalIndex()] = flagtaggedjetSV3D;
+      uint8_t bit = jettaggingutilities::setTaggingSVBit(mcdjet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, tagPointForSV);
+      decisionNonML[mcdjet.globalIndex()] |= bit;
     }
   }
   PROCESS_SWITCH(JetTaggerHFTask, processMCDSV, "Fill tagging decision for mcd jets with sv", false);
 
   void processDataAlgorithmML(soa::Join<JetTableData, aod::DataSecondaryVertex3ProngIndices> const& allJets, JetTagTracksData const& allTracks, aod::DataSecondaryVertex3Prongs const& allSVs)
   {
-    scoreML.resize(allJets.size()) ;
     analyzeJetAlgorithmML(allJets, allTracks, allSVs);
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDataAlgorithmML, "Fill ML evaluation score for data jets", false);
 
   void processMCDAlgorithmML(soa::Join<JetTableMCD, aod::MCDSecondaryVertex3ProngIndices> const& allJets, JetTagTracksMCD const& allTracks, aod::MCDSecondaryVertex3Prongs const& allSVs)
   {
-    scoreML.resize(allJets.size()) ;
     analyzeJetAlgorithmML(allJets, allTracks, allSVs);
   }
   PROCESS_SWITCH(JetTaggerHFTask, processMCDAlgorithmML, "Fill ML evaluation score for MCD jets", false);
 
   void processFillTablesData(JetTableData::iterator const& jet)
   {
-    taggingTableData(decisionIPs[jet.globalIndex()], decisionIPs3D[jet.globalIndex()], decisionSV[jet.globalIndex()], decisionSV3D[jet.globalIndex()], scoreML[jet.globalIndex()], decisionJP[jet.globalIndex()]);
+    taggingTableData(decisionNonML[jet.globalIndex()], decisionJP[jet.globalIndex()], scoreML[jet.globalIndex()]);
   }
   PROCESS_SWITCH(JetTaggerHFTask, processFillTablesData, "Fill Tables for tagging decision and ML score on Data jets", false);
 
   void processFillTablesMCD(JetTableMCD::iterator const& mcdjet)
   {
-    taggingTableMCD(decisionIPs[mcdjet.globalIndex()], decisionIPs3D[mcdjet.globalIndex()], decisionSV[mcdjet.globalIndex()], decisionSV3D[mcdjet.globalIndex()], scoreML[mcdjet.globalIndex()], decisionJP[mcdjet.globalIndex()]);
+    taggingTableMCD(decisionNonML[mcdjet.globalIndex()], decisionJP[mcdjet.globalIndex()], scoreML[mcdjet.globalIndex()]);
   }
   PROCESS_SWITCH(JetTaggerHFTask, processFillTablesMCD, "Fill Tables for tagging decision and ML score on MCD jets", false);
 
