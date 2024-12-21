@@ -46,6 +46,14 @@ enum JetTaggingSpecies {
 
 namespace jettaggingutilities
 {
+
+enum TaggingMethodNonML {
+  IPs = 0,
+  IPs3D = 1,
+  SV = 2,
+  SV3D =3
+};
+
 const int cmTomum = 10000; // using cm -> #mum for impact parameter (dca)
 
 struct BJetParams {
@@ -106,6 +114,32 @@ bool isCHadron(int pc)
                            4224, 4214, 4114, 4232, 4132, 4322, 4312, 4324, 4314, 4332, 4334, 4412, 4422, 4414, 4424, 4432, 4434, 4444};
 
   return (std::find(bPdG.begin(), bPdG.end(), std::abs(pc)) != bPdG.end());
+}
+
+template <typename T, typename U, typename V=float>
+uint8_t setTaggingIPBit(T const& jet, U const &jtracks, V const& trackDcaXYMax, V const& trackDcaZMax, V const& tagPointForIP, int const& minIPCount)
+{
+  uint8_t bit = 0;
+  if (isGreatherTanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, false)) {
+    SETBIT(bit, TaggingMethodNonML::IPs);
+  }
+  if (isGreatherTanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, true)) {
+    SETBIT(bit, TaggingMethodNonML::IPs3D);
+  }
+  return bit;
+}
+
+template <typename T, typename U, typename V=float>
+uint8_t setTaggingSVBit(T const& jet, U const &prongs, V const& prongChi2PCAMax, V const& prongsigmaLxyMax, V const& svDispersionMax, V const& tagPointForSV)
+{
+  uint8_t bit = 0;
+  if(isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, false, tagPointForSV) {
+    SETBIT(bit, TaggingMethodNonML::SV);
+  }
+  if(isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, true, tagPointForSV) {
+    SETBIT(bit, TaggingMethodNonML::SV3D);
+  }
+  return bit;
 }
 
 /**
