@@ -306,6 +306,13 @@ struct JetTaggerHFTask {
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDummy, "Dummy process", true);
 
+  void processSetUpData(JetTableData const& jets)
+  {
+    decisionIPs.resize(jets.size());
+    decisionIPs3D.resize(jets.size());
+    decisionJP.resize(jets.size());
+
+  }
   void processDataIP(aod::JetCollision const& /*collision*/, JetTableData const& jets, JetTagTracksData const& jtracks)
   {
     decisionIPs.resize(jets.size());
