@@ -34,13 +34,11 @@ using namespace o2;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
 
-template <typename JetTableData, typename JetTableMCD, typename JetTaggingTableData, typename JetTaggingTableMCD>
+template <typename JetTable, typename SVIndicesTable, typename SVTable, typename JetTaggingTable>
 struct JetTaggerHFTask {
-
   static constexpr double DefaultCutsMl[1][2] = {{0.5, 0.5}};
 
-  Produces<JetTaggingTableData> taggingTableData;
-  Produces<JetTaggingTableMCD> taggingTableMCD;
+  Produces<JetTaggingTable> taggingTable;
 
   // configuration topological cut for track and sv
   Configurable<float> trackDcaXYMax{"trackDcaXYMax", 1, "minimum DCA xy acceptance for tracks [cm]"};
@@ -97,8 +95,7 @@ struct JetTaggerHFTask {
   o2::analysis::MlResponse<float> bMlResponse;
   o2::ccdb::CcdbApi ccdbApi;
 
-  using JetTagTracksData = soa::Join<aod::JetTracks, aod::JTrackExtras, aod::JTrackPIs>;
-  using JetTagTracksMCD = soa::Join<aod::JetTracksMCD, aod::JTrackExtras, aod::JTrackPIs>;
+  using JetTracksExt = soa::Join<aod::JetTracks, aod::JTrackExtras, aod::JTrackPIs>;
 
   bool useResoFuncFromIncJet = false;
   int maxOrder = -1;
@@ -257,7 +254,7 @@ struct JetTaggerHFTask {
       }
     }
 
-    if (doprocessDataAlgorithmML || doprocessMCDAlgorithmML) {
+    if (doprocessAlgorithmML) {
       bMlResponse.configure(binsPtMl, cutsMl, cutDirMl, nClassesMl);
       if (loadModelsFromCCDB) {
         ccdbApi.init(ccdbUrl);
@@ -302,7 +299,7 @@ struct JetTaggerHFTask {
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDummy, "Dummy process", true);
 
-  void processSetUpData(JetTableData const& jets)
+  void processSetUpData(JetTable const& jets)
   {
     decisionNonML.clear();
     decisionJP.clear();
@@ -312,7 +309,7 @@ struct JetTaggerHFTask {
     scoreML.resize(jets.size());
   }
 
-  void processDataIP(aod::JetCollision const& /*collision*/, JetTableData const& jets, JetTagTracksData const& jtracks)
+  void processDataIP(aod::JetCollision const& /*collision*/, JetTable const& jets, JetTracksExt const& jtracks)
   {
     for (auto& jet : jets) {
       if (useJetProb) {
@@ -328,77 +325,55 @@ struct JetTaggerHFTask {
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDataIP, "Fill tagging decision for data jets", false);
 
-  void processDataSV(aod::JetCollision const& /*collision*/, soa::Join<JetTableData, aod::DataSecondaryVertex3ProngIndices> const& jets, JetTagTracksData const& /*jtracks*/, aod::DataSecondaryVertex3Prongs const& prongs)
+  void processMCDIP(aod::JetCollision const& /*collision*/, soa::Join<JetTable, aod::ChargedMCDetectorLevelJetFlavourDef> const& jets, JetTracksExt const& jtracks)
   {
-    for (auto const& jet : jets) {
-      uint8_t bit = jettaggingutilities::setTaggingSVBit(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, tagPointForSV);
-      decisionNonML[jet.globalIndex()] |= bit;
-    }
-  }
-  PROCESS_SWITCH(JetTaggerHFTask, processDataSV, "Fill tagging decision for data jets", false);
-
-  void processMCDIP(aod::JetCollision const& /*collision*/, soa::Join<JetTableMCD, aod::ChargedMCDetectorLevelJetFlavourDef> const& mcdjets, JetTagTracksMCD const& jtracks)
-  {
-    for (auto& mcdjet : mcdjets) {
-      int origin = mcdjet.origin();
+    for (auto& jet : jets) {
+      int origin = jet.origin();
       if (useJetProb) {
-        calculateJetProbability(origin, mcdjet, jtracks, jetProb);
+        calculateJetProbability(origin, jet, jtracks, jetProb);
         if (trackProbQA) {
-          evaluateTrackProbQA(origin, mcdjet, jtracks);
+          evaluateTrackProbQA(origin, jet, jtracks);
         }
       }
-      decisionJP[mcdjet.globalIndex()] = jetProb;
-      uint8_t bit = jettaggingutilities::setTaggingIPBit(mcdjet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount);
-      decisionNonML[mcdjet.globalIndex()] |= bit;
+      decisionJP[jet.globalIndex()] = jetProb;
+      uint8_t bit = jettaggingutilities::setTaggingIPBit(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount);
+      decisionNonML[jet.globalIndex()] |= bit;
     }
   }
   PROCESS_SWITCH(JetTaggerHFTask, processMCDIP, "Fill tagging decision for mcd jets", false);
 
-  void processMCDSV(aod::JetCollision const& /*collision*/, soa::Join<JetTableMCD, aod::MCDSecondaryVertex3ProngIndices> const& mcdjets, JetTagTracksMCD const& /*jtracks*/, aod::MCDSecondaryVertex3Prongs const& prongs)
+  void processSV(aod::JetCollision const& /*collision*/, soa::Join<JetTable, SVIndicesTable> const& jets, JetTracksExt const& /*jtracks*/, SVTable const& prongs)
   {
-    for (auto& mcdjet : mcdjets) {
-      uint8_t bit = jettaggingutilities::setTaggingSVBit(mcdjet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, tagPointForSV);
-      decisionNonML[mcdjet.globalIndex()] |= bit;
+    for (auto& jet : jets) {
+      uint8_t bit = jettaggingutilities::setTaggingSVBit(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, tagPointForSV);
+      decisionNonML[jet.globalIndex()] |= bit;
     }
   }
-  PROCESS_SWITCH(JetTaggerHFTask, processMCDSV, "Fill tagging decision for mcd jets with sv", false);
+  PROCESS_SWITCH(JetTaggerHFTask, processSV, "Fill tagging decision for charged jets", false);
 
-  void processDataAlgorithmML(soa::Join<JetTableData, aod::DataSecondaryVertex3ProngIndices> const& allJets, JetTagTracksData const& allTracks, aod::DataSecondaryVertex3Prongs const& allSVs)
+  void processAlgorithmML(soa::Join<JetTable, SVIndicesTable> const& allJets, JetTracksExt const& allTracks, SVTable const& allSVs)
   {
     analyzeJetAlgorithmML(allJets, allTracks, allSVs);
   }
-  PROCESS_SWITCH(JetTaggerHFTask, processDataAlgorithmML, "Fill ML evaluation score for data jets", false);
+  PROCESS_SWITCH(JetTaggerHFTask, processAlgorithmML, "Fill ML evaluation score for charged jets", false);
 
-  void processMCDAlgorithmML(soa::Join<JetTableMCD, aod::MCDSecondaryVertex3ProngIndices> const& allJets, JetTagTracksMCD const& allTracks, aod::MCDSecondaryVertex3Prongs const& allSVs)
+  void processFillTables(JetTable::iterator const& jet)
   {
-    analyzeJetAlgorithmML(allJets, allTracks, allSVs);
+    taggingTableMCD(decisionNonML[jet.globalIndex()], decisionJP[jet.globalIndex()], scoreML[jet.globalIndex()]);
   }
-  PROCESS_SWITCH(JetTaggerHFTask, processMCDAlgorithmML, "Fill ML evaluation score for MCD jets", false);
-
-  void processFillTablesData(JetTableData::iterator const& jet)
-  {
-    taggingTableData(decisionNonML[jet.globalIndex()], decisionJP[jet.globalIndex()], scoreML[jet.globalIndex()]);
-  }
-  PROCESS_SWITCH(JetTaggerHFTask, processFillTablesData, "Fill Tables for tagging decision and ML score on Data jets", false);
-
-  void processFillTablesMCD(JetTableMCD::iterator const& mcdjet)
-  {
-    taggingTableMCD(decisionNonML[mcdjet.globalIndex()], decisionJP[mcdjet.globalIndex()], scoreML[mcdjet.globalIndex()]);
-  }
-  PROCESS_SWITCH(JetTaggerHFTask, processFillTablesMCD, "Fill Tables for tagging decision and ML score on MCD jets", false);
-
+  PROCESS_SWITCH(JetTaggerHFTask, processFillTables, "Fill Tables for tagging decision and ML score on charged jets", false);
 };
 
-using JetTaggerChargedJets = JetTaggerHFTask<soa::Join<aod::ChargedJets, aod::ChargedJetConstituents>, soa::Join<aod::ChargedMCDetectorLevelJets, aod::ChargedMCDetectorLevelJetConstituents>, aod::ChargedJetTags, aod::ChargedMCDetectorLevelJetTags>;
-using JetTaggerFullJets = JetTaggerHFTask<soa::Join<aod::FullJets, aod::FullJetConstituents>, soa::Join<aod::FullMCDetectorLevelJets, aod::FullMCDetectorLevelJetConstituents>, aod::FullJetTags, aod::FullMCDetectorLevelJetTags>;
+using JetTaggerHFDataCharged = JetTaggerHFTask<soa::Join<aod::ChargedJets, aod::ChargedJetConstituents>, aod::DataSecondaryVertex3ProngIndices, aod::DataSecondaryVertex3Prongs, aod::ChargedJetTags>;
+using JetTaggerHFMCDCharged = JetTaggerHFTask<soa::Join<aod::ChargedMCDetectorLevelJets, aod::ChargedMCDetectorLevelJetConstituents>, aod::MCDSecondaryVertex3ProngIndices, aod::MCDSecondaryVertex3Prongs, aod::ChargedMCDetectorLevelJetTags>;
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
 
   std::vector<o2::framework::DataProcessorSpec> tasks;
 
-  tasks.emplace_back(adaptAnalysisTask<JetTaggerChargedJets>(cfgc, SetDefaultProcesses{}, TaskName{"jet-taggerhf-charged"}));
-  tasks.emplace_back(adaptAnalysisTask<JetTaggerFullJets>(cfgc, SetDefaultProcesses{}, TaskName{"jet-taggerhf-full"}));
+  tasks.emplace_back(adaptAnalysisTask<JetTaggerHFDataCharged>(cfgc, SetDefaultProcesses{}, TaskName{"jet-taggerhf-data-charged"}));
+  tasks.emplace_back(adaptAnalysisTask<JetTaggerHFMCDCharged>(cfgc, SetDefaultProcesses{}, TaskName{"jet-taggerhf-mcd-charged"}));
 
   return WorkflowSpec{tasks};
 }
