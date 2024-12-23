@@ -807,14 +807,14 @@ struct JetTaggerHFQA {
     if (jet.pt() > pTHatMaxMCD * pTHat) {
       return;
     }
-    registry.fill(HIST("h2_jet_pt_JP"), jet.pt(), jet.jetProb()[0]);
-    registry.fill(HIST("h2_jet_pt_neg_log_JP"), jet.pt(), -1 * std::log(jet.jetProb()[0]));
-    registry.fill(HIST("h2_jet_pt_JP_N1"), jet.pt(), jet.jetProb()[1]);
-    registry.fill(HIST("h2_jet_pt_neg_log_JP_N1"), jet.pt(), -1 * TMath::Log(jet.jetProb()[1]));
-    registry.fill(HIST("h2_jet_pt_JP_N2"), jet.pt(), jet.jetProb()[2]);
-    registry.fill(HIST("h2_jet_pt_neg_log_JP_N2"), jet.pt(), -1 * TMath::Log(jet.jetProb()[2]));
-    registry.fill(HIST("h2_jet_pt_JP_N3"), jet.pt(), jet.jetProb()[3]);
-    registry.fill(HIST("h2_jet_pt_neg_log_JP_N3"), jet.pt(), -1 * TMath::Log(jet.jetProb()[3]));
+    registry.fill(HIST("h2_jet_pt_JP"), jet.pt(), jet.jetProb());
+    registry.fill(HIST("h2_jet_pt_neg_log_JP"), jet.pt(), -1 * std::log(jet.jetProb()));
+    // registry.fill(HIST("h2_jet_pt_JP_N1"), jet.pt(), jet.jetProb()[1]);
+    // registry.fill(HIST("h2_jet_pt_neg_log_JP_N1"), jet.pt(), -1 * TMath::Log(jet.jetProb()[1]));
+    // registry.fill(HIST("h2_jet_pt_JP_N2"), jet.pt(), jet.jetProb()[2]);
+    // registry.fill(HIST("h2_jet_pt_neg_log_JP_N2"), jet.pt(), -1 * TMath::Log(jet.jetProb()[2]));
+    // registry.fill(HIST("h2_jet_pt_JP_N3"), jet.pt(), jet.jetProb()[3]);
+    // registry.fill(HIST("h2_jet_pt_neg_log_JP_N3"), jet.pt(), -1 * TMath::Log(jet.jetProb()[3]));
   }
 
   template <typename T>
@@ -824,14 +824,14 @@ struct JetTaggerHFQA {
     if (mcdjet.pt() > pTHatMaxMCD * pTHat) {
       return;
     }
-    registry.fill(HIST("h3_jet_pt_JP_flavour"), mcdjet.pt(), mcdjet.jetProb()[0], mcdjet.origin(), eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[0]), mcdjet.origin(), eventWeight);
-    registry.fill(HIST("h3_jet_pt_JP_N1_flavour"), mcdjet.pt(), mcdjet.jetProb()[1], mcdjet.origin(), eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_N1_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[1]), mcdjet.origin(), eventWeight);
-    registry.fill(HIST("h3_jet_pt_JP_N2_flavour"), mcdjet.pt(), mcdjet.jetProb()[2], mcdjet.origin(), eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_N2_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[2]), mcdjet.origin(), eventWeight);
-    registry.fill(HIST("h3_jet_pt_JP_N3_flavour"), mcdjet.pt(), mcdjet.jetProb()[3], mcdjet.origin(), eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_N3_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[3]), mcdjet.origin(), eventWeight);
+    registry.fill(HIST("h3_jet_pt_JP_flavour"), mcdjet.pt(), mcdjet.jetProb(), mcdjet.origin(), eventWeight);
+    registry.fill(HIST("h3_jet_pt_neg_log_JP_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()), mcdjet.origin(), eventWeight);
+    // registry.fill(HIST("h3_jet_pt_JP_N1_flavour"), mcdjet.pt(), mcdjet.jetProb()[1], mcdjet.origin(), eventWeight);
+    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N1_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[1]), mcdjet.origin(), eventWeight);
+    // registry.fill(HIST("h3_jet_pt_JP_N2_flavour"), mcdjet.pt(), mcdjet.jetProb()[2], mcdjet.origin(), eventWeight);
+    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N2_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[2]), mcdjet.origin(), eventWeight);
+    // registry.fill(HIST("h3_jet_pt_JP_N3_flavour"), mcdjet.pt(), mcdjet.jetProb()[3], mcdjet.origin(), eventWeight);
+    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N3_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[3]), mcdjet.origin(), eventWeight);
   }
 
   template <typename T, typename U, typename V>
@@ -850,14 +850,14 @@ struct JetTaggerHFQA {
     }
     if (jetflavourRun2Def < 0)
       return;
-    registry.fill(HIST("h3_jet_pt_JP_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[0], jetflavourRun2Def, eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[0]), jetflavourRun2Def, eventWeight);
-    registry.fill(HIST("h3_jet_pt_JP_N1_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[1], jetflavourRun2Def, eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_N1_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[1]), jetflavourRun2Def, eventWeight);
-    registry.fill(HIST("h3_jet_pt_JP_N2_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[2], jetflavourRun2Def, eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_N2_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[2]), jetflavourRun2Def, eventWeight);
-    registry.fill(HIST("h3_jet_pt_JP_N3_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[3], jetflavourRun2Def, eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_N3_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[3]), jetflavourRun2Def, eventWeight);
+    registry.fill(HIST("h3_jet_pt_JP_flavour_run2"), mcdjet.pt(), mcdjet.jetProb(), jetflavourRun2Def, eventWeight);
+    registry.fill(HIST("h3_jet_pt_neg_log_JP_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()), jetflavourRun2Def, eventWeight);
+    // registry.fill(HIST("h3_jet_pt_JP_N1_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[1], jetflavourRun2Def, eventWeight);
+    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N1_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[1]), jetflavourRun2Def, eventWeight);
+    // registry.fill(HIST("h3_jet_pt_JP_N2_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[2], jetflavourRun2Def, eventWeight);
+    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N2_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[2]), jetflavourRun2Def, eventWeight);
+    // registry.fill(HIST("h3_jet_pt_JP_N3_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[3], jetflavourRun2Def, eventWeight);
+    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N3_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[3]), jetflavourRun2Def, eventWeight);
   }
 
   template <typename T, typename U>
@@ -892,7 +892,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h2_jet_pt_2prong_Sxy_N1"), jet.pt(), maxSxy);
       registry.fill(HIST("h2_jet_pt_2prong_mass_N1"), jet.pt(), massSV);
-      if (jet.flagtaggedjetSV()) {
+      if (TESTBIT(jet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV)) {
         registry.fill(HIST("h2_taggedjet_pt_2prong_Sxy_N1"), jet.pt(), maxSxy);
         registry.fill(HIST("h2_taggedjet_pt_2prong_mass_N1"), jet.pt(), massSV);
       }
@@ -903,7 +903,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h2_jet_pt_2prong_Sxyz_N1"), jet.pt(), maxSxyz);
       registry.fill(HIST("h2_jet_pt_2prong_mass_xyz_N1"), jet.pt(), massSV);
-      if (jet.flagtaggedjetSVxyz()) {
+      if (TESTBIT(jet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV3D)) {
         registry.fill(HIST("h2_taggedjet_pt_2prong_Sxyz_N1"), jet.pt(), maxSxyz);
         registry.fill(HIST("h2_taggedjet_pt_2prong_mass_xyz_N1"), jet.pt(), massSV);
       }
@@ -942,7 +942,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h2_jet_pt_3prong_Sxy_N1"), jet.pt(), maxSxy);
       registry.fill(HIST("h2_jet_pt_3prong_mass_N1"), jet.pt(), massSV);
-      if (jet.flagtaggedjetSV()) {
+      if (TESTBIT(jet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV)) {
         registry.fill(HIST("h2_taggedjet_pt_3prong_Sxy_N1"), jet.pt(), maxSxy);
         registry.fill(HIST("h2_taggedjet_pt_3prong_mass_N1"), jet.pt(), massSV);
       }
@@ -953,7 +953,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h2_jet_pt_3prong_Sxyz_N1"), jet.pt(), maxSxyz);
       registry.fill(HIST("h2_jet_pt_3prong_mass_xyz_N1"), jet.pt(), massSV);
-      if (jet.flagtaggedjetSVxyz()) {
+      if (TESTBIT(jet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV3D)) {
         registry.fill(HIST("h2_taggedjet_pt_3prong_Sxyz_N1"), jet.pt(), maxSxyz);
         registry.fill(HIST("h2_taggedjet_pt_3prong_mass_xyz_N1"), jet.pt(), massSV);
       }
@@ -992,7 +992,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_2prong_Sxy_N1_flavour"), mcdjet.pt(), maxSxy, origin, eventWeight);
       registry.fill(HIST("h3_jet_pt_2prong_mass_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
-      if (mcdjet.flagtaggedjetSV()) {
+      if (TESTBIT(mcdjet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_2prong_Sxy_N1_flavour"), mcdjet.pt(), maxSxy, origin, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_2prong_mass_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
       }
@@ -1003,7 +1003,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h3_jet_pt_2prong_Sxyz_N1_flavour"), mcdjet.pt(), maxSxyz, origin, eventWeight);
       registry.fill(HIST("h3_jet_pt_2prong_mass_xyz_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
-      if (mcdjet.flagtaggedjetSVxyz()) {
+      if (TESTBIT(mcdjet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV3D)) {
         registry.fill(HIST("h3_taggedjet_pt_2prong_Sxyz_N1_flavour"), mcdjet.pt(), maxSxyz, origin, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_2prong_mass_xyz_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
       }
@@ -1044,7 +1044,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_2prong_Sxy_N1_flavour_run2"), mcdjet.pt(), maxSxy, jetflavourRun2Def, eventWeight);
       registry.fill(HIST("h3_jet_pt_2prong_mass_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
-      if (mcdjet.flagtaggedjetSV()) {
+      if (TESTBIT(mcdjet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_2prong_Sxy_N1_flavour_run2"), mcdjet.pt(), maxSxy, jetflavourRun2Def, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_2prong_mass_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
       }
@@ -1055,7 +1055,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h3_jet_pt_2prong_Sxyz_N1_flavour_run2"), mcdjet.pt(), maxSxyz, jetflavourRun2Def, eventWeight);
       registry.fill(HIST("h3_jet_pt_2prong_mass_xyz_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
-      if (mcdjet.flagtaggedjetSVxyz()) {
+      if (TESTBIT(mcdjet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV3D)) {
         registry.fill(HIST("h3_taggedjet_pt_2prong_Sxyz_N1_flavour_run2"), mcdjet.pt(), maxSxyz, jetflavourRun2Def, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_2prong_mass_xyz_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
       }
@@ -1095,7 +1095,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_3prong_Sxy_N1_flavour"), mcdjet.pt(), maxSxy, origin, eventWeight);
       registry.fill(HIST("h3_jet_pt_3prong_mass_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
-      if (mcdjet.flagtaggedjetSV()) {
+      if (TESTBIT(mcdjet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_3prong_Sxy_N1_flavour"), mcdjet.pt(), maxSxy, origin, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_3prong_mass_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
       }
@@ -1106,7 +1106,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h3_jet_pt_3prong_Sxyz_N1_flavour"), mcdjet.pt(), maxSxyz, origin, eventWeight);
       registry.fill(HIST("h3_jet_pt_3prong_mass_xyz_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
-      if (mcdjet.flagtaggedjetSV()) {
+      if (TESTBIT(mcdjet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_3prong_Sxyz_N1_flavour"), mcdjet.pt(), maxSxyz, origin, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_3prong_mass_xyz_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
       }
@@ -1149,7 +1149,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_3prong_Sxy_N1_flavour_run2"), mcdjet.pt(), maxSxy, jetflavourRun2Def, eventWeight);
       registry.fill(HIST("h3_jet_pt_3prong_mass_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
-      if (mcdjet.flagtaggedjetSV()) {
+      if (TESTBIT(mcdjet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_3prong_Sxy_N1_flavour_run2"), mcdjet.pt(), maxSxy, jetflavourRun2Def, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_3prong_mass_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
       }
@@ -1160,7 +1160,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_3prong_Sxyz_N1_flavour_run2"), mcdjet.pt(), maxSxyz, jetflavourRun2Def, eventWeight);
       registry.fill(HIST("h3_jet_pt_3prong_mass_xyz_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
-      if (mcdjet.flagtaggedjetSVxyz()) {
+      if (TESTBIT(mcdjet.bitTaggedjetNonML(), jettaggingutilities::TaggingMethodNonML::SV3D)) {
         registry.fill(HIST("h3_taggedjet_pt_3prong_Sxyz_N1_flavour_run2"), mcdjet.pt(), maxSxyz, jetflavourRun2Def, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_3prong_mass_xyz_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
       }
