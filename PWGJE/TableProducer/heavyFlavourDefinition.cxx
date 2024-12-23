@@ -16,9 +16,6 @@
 #include <memory>
 #include <vector>
 
-#include <TF1.h>
-#include <TH1.h>
-
 #include "Framework/AnalysisTask.h"
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/ASoA.h"
@@ -29,7 +26,6 @@
 #include "PWGJE/DataModel/Jet.h"
 #include "PWGJE/DataModel/JetTagging.h"
 #include "PWGJE/Core/JetTaggingUtilities.h"
-#include "PWGJE/Core/JetDerivedDataUtilities.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -44,7 +40,7 @@ struct HeavyFlavourDefinitionTask {
   Configurable<float> maxDeltaR{"maxDeltaR", 0.25, "maximum distance of jet axis from flavour initiating parton"};
   Configurable<bool> searchUpToQuark{"searchUpToQuark", true, "Finding first mother in particles to quark"};
 
-  using JetTracksMCD = soa::Join<aod::JetTracksMCD, aod::JTrackExtras, aod::JTrackPIs>;
+  using JetTracksMCD = soa::Join<aod::JetTracksMCD, aod::JTrackPIs>;
   Preslice<aod::JetParticles> particlesPerCollision = aod::jmcparticle::mcCollisionId;
 
   void init(InitContext const&)
@@ -114,8 +110,8 @@ WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 
   std::vector<o2::framework::DataProcessorSpec> tasks;
 
-  tasks.emplace_back(adaptAnalysisTask<JetHfDefinitionCharged>(cfgc));
-  tasks.emplace_back(adaptAnalysisTask<JetHfDefinitionFull>(cfgc));
+  tasks.emplace_back(adaptAnalysisTask<JetHfDefinitionCharged>(cfgc, SetDefaultProcesses{}, TaskName{"jet-hf-definition-charged"}));
+  tasks.emplace_back(adaptAnalysisTask<JetHfDefinitionFull>(cfgc, SetDefaultProcesses{}, TaskName{"jet-hf-definition-full"}));
 
   return WorkflowSpec{tasks};
 }

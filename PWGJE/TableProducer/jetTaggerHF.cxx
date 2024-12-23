@@ -108,36 +108,28 @@ struct JetTaggerHFTask {
   std::unique_ptr<TF1> fSignImpXYSigLfJetMC = nullptr;
 
   std::vector<uint8_t> decisionNonML;
-  std::vector<std::vector<float>> decisionJP;
   std::vector<float> scoreML;
 
   template <typename T, typename U>
-  void calculateJetProbability(int origin, T const& jet, U const& jtracks, std::vector<float>& jetProb, bool const& isMC = true)
+  float calculateJetProbability(int origin, T const& jet, U const& jtracks, bool const& isMC = true)
   {
-    jetProb.clear();
-    jetProb.reserve(maxOrder);
-    for (int order = 0; order < maxOrder; order++) {
-      if (!isMC) {
-        jetProb.push_back(jettaggingutilities::getJetProbability(fSignImpXYSigData, jet, jtracks, trackDcaXYMax, trackDcaZMax, order, tagPointForIP, minSignImpXYSig));
+    float jetProb = -1.0;
+    if (!isMC) {
+      jetProb = jettaggingutilities::getJetProbability(fSignImpXYSigData, jet, jtracks, trackDcaXYMax, trackDcaZMax, minSignImpXYSig);
+    } else {
+      if (useResoFuncFromIncJet) {
+        jetProb = jettaggingutilities::getJetProbability(fSignImpXYSigIncJetMC, jet, jtracks, trackDcaXYMax, trackDcaZMax, minSignImpXYSig);
       } else {
-        if (useResoFuncFromIncJet) {
-          jetProb.push_back(jettaggingutilities::getJetProbability(fSignImpXYSigIncJetMC, jet, jtracks, trackDcaXYMax, trackDcaZMax, order, tagPointForIP, minSignImpXYSig));
+        if (origin == JetTaggingSpecies::charm) {
+          jetProb = jettaggingutilities::getJetProbability(fSignImpXYSigCharmJetMC, jet, jtracks, trackDcaXYMax, trackDcaZMax, minSignImpXYSig);
+        } else if (origin == JetTaggingSpecies::beauty) {
+          jetProb = jettaggingutilities::getJetProbability(fSignImpXYSigBeautyJetMC, jet, jtracks, trackDcaXYMax, trackDcaZMax, minSignImpXYSig);
         } else {
-          if (origin == JetTaggingSpecies::charm) {
-            jetProb.push_back(jettaggingutilities::getJetProbability(fSignImpXYSigCharmJetMC, jet, jtracks, trackDcaXYMax, trackDcaZMax, order, tagPointForIP, minSignImpXYSig));
-          }
-          if (origin == JetTaggingSpecies::beauty) {
-            jetProb.push_back(jettaggingutilities::getJetProbability(fSignImpXYSigBeautyJetMC, jet, jtracks, trackDcaXYMax, trackDcaZMax, order, tagPointForIP, minSignImpXYSig));
-          }
-          if (origin == JetTaggingSpecies::lightflavour) {
-            jetProb.push_back(jettaggingutilities::getJetProbability(fSignImpXYSigLfJetMC, jet, jtracks, trackDcaXYMax, trackDcaZMax, order, tagPointForIP, minSignImpXYSig));
-          }
-          if (origin != JetTaggingSpecies::charm && origin != JetTaggingSpecies::beauty && origin != JetTaggingSpecies::lightflavour) {
-            jetProb.push_back(-1);
-          }
+          jetProb = jettaggingutilities::getJetProbability(fSignImpXYSigLfJetMC, jet, jtracks, trackDcaXYMax, trackDcaZMax, minSignImpXYSig);
         }
       }
     }
+    return jetProb;
   }
 
   template <typename T, typename U>
@@ -244,11 +236,11 @@ struct JetTaggerHFTask {
     if (trackProbQA) {
       AxisSpec trackProbabilityAxis = {binTrackProbability, "Track proability"};
       AxisSpec jetFlavourAxis = {binJetFlavour, "Jet flavour"};
-      if (doprocessDataIP) {
+      if (doprocessFillTablesData) {
         registry.add("h_pos_track_probability", "positive track probability", {HistType::kTH1F, {{trackProbabilityAxis}}});
         registry.add("h_neg_track_probability", "negative track probability", {HistType::kTH1F, {{trackProbabilityAxis}}});
       }
-      if (doprocessMCDIP) {
+      if (doprocessFillTablesMCD) {
         registry.add("h2_pos_track_probability_flavour", "positive track probability", {HistType::kTH2F, {{trackProbabilityAxis}, {jetFlavourAxis}}});
         registry.add("h2_neg_track_probability_flavour", "negative track probability", {HistType::kTH2F, {{trackProbabilityAxis}, {jetFlavourAxis}}});
       }
@@ -299,58 +291,32 @@ struct JetTaggerHFTask {
   }
   PROCESS_SWITCH(JetTaggerHFTask, processDummy, "Dummy process", true);
 
-  void processSetUp(JetTable const& jets)
+  void processSetup(JetTable const& jets)
   {
     decisionNonML.clear();
-    decisionJP.clear();
     scoreML.clear();
     decisionNonML.resize(jets.size());
-    decisionJP.resize(jets.size());
     scoreML.resize(jets.size());
   }
   PROCESS_SWITCH(JetTaggerHFTask, processSetup, "Setup initialization and size of jets for filling table", true);
 
-  void processDataIP(aod::JetCollision const& /*collision*/, JetTable const& jets, JetTracksExt const& jtracks)
+  void processIP(JetTable const& jets, JetTracksExt const& jtracks)
   {
     for (auto& jet : jets) {
-      if (useJetProb) {
-        calculateJetProbability(0, jet, jtracks, jetProb, false);
-        if (trackProbQA) {
-          evaluateTrackProbQA(0, jet, jtracks, false);
-        }
-      }
-      decisionJP[jet.globalIndex()] = jetProb;
       uint8_t bit = jettaggingutilities::setTaggingIPBit(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount);
       decisionNonML[jet.globalIndex()] |= bit;
     }
   }
-  PROCESS_SWITCH(JetTaggerHFTask, processDataIP, "Fill tagging decision for data jets", false);
+  PROCESS_SWITCH(JetTaggerHFTask, processIP, "Fill tagging decision for jet with the IP algorithm", false);
 
-  void processMCDIP(aod::JetCollision const& /*collision*/, soa::Join<JetTable, aod::ChargedMCDetectorLevelJetFlavourDef> const& jets, JetTracksExt const& jtracks)
+  void processSV(soa::Join<JetTable, SVIndicesTable> const& jets, SVTable const& prongs)
   {
     for (auto& jet : jets) {
-      int origin = jet.origin();
-      if (useJetProb) {
-        calculateJetProbability(origin, jet, jtracks, jetProb);
-        if (trackProbQA) {
-          evaluateTrackProbQA(origin, jet, jtracks);
-        }
-      }
-      decisionJP[jet.globalIndex()] = jetProb;
-      uint8_t bit = jettaggingutilities::setTaggingIPBit(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount);
+      uint8_t bit = jettaggingutilities::setTaggingSVBit(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, prongIPxyMin, prongIPxyMax, svDispersionMax, tagPointForSV);
       decisionNonML[jet.globalIndex()] |= bit;
     }
   }
-  PROCESS_SWITCH(JetTaggerHFTask, processMCDIP, "Fill tagging decision for mcd jets", false);
-
-  void processSV(aod::JetCollision const& /*collision*/, soa::Join<JetTable, SVIndicesTable> const& jets, JetTracksExt const& /*jtracks*/, SVTable const& prongs)
-  {
-    for (auto& jet : jets) {
-      uint8_t bit = jettaggingutilities::setTaggingSVBit(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, tagPointForSV);
-      decisionNonML[jet.globalIndex()] |= bit;
-    }
-  }
-  PROCESS_SWITCH(JetTaggerHFTask, processSV, "Fill tagging decision for charged jets", false);
+  PROCESS_SWITCH(JetTaggerHFTask, processSV, "Fill tagging decision for jets with the SV", false);
 
   void processAlgorithmML(soa::Join<JetTable, SVIndicesTable> const& allJets, JetTracksExt const& allTracks, SVTable const& allSVs)
   {
@@ -358,11 +324,32 @@ struct JetTaggerHFTask {
   }
   PROCESS_SWITCH(JetTaggerHFTask, processAlgorithmML, "Fill ML evaluation score for charged jets", false);
 
-  void processFillTables(JetTable::iterator const& jet)
+  void processFillTablesData(JetTable::iterator const& jet, JetTracksExt const& jtracks)
   {
-    taggingTableMCD(decisionNonML[jet.globalIndex()], decisionJP[jet.globalIndex()], scoreML[jet.globalIndex()]);
+    float jetProb = -1.0;
+    if (useJetProb) {
+      jetProb = calculateJetProbability(0, jet, jtracks, false);
+      if (trackProbQA) {
+        evaluateTrackProbQA(0, jet, jtracks, false);
+      }
+    }
+    taggingTable(decisionNonML[jet.globalIndex()], jetProb, scoreML[jet.globalIndex()]);
   }
-  PROCESS_SWITCH(JetTaggerHFTask, processFillTables, "Fill Tables for tagging decision and ML score on charged jets", false);
+  PROCESS_SWITCH(JetTaggerHFTask, processFillTablesData, "Fill Tables for tagging decision, jet probability, and ML score on charged jets in data", false);
+
+  void processFillTablesMCD(soa::Join<JetTable, aod::ChargedMCDetectorLevelJetFlavourDef>::iterator const& jet, JetTracksExt const& jtracks)
+  {
+    float jetProb = -1.0;
+    int origin = jet.origin();
+    if (useJetProb) {
+      jetProb = calculateJetProbability(origin, jet, jtracks);
+      if (trackProbQA) {
+        evaluateTrackProbQA(origin, jet, jtracks);
+      }
+    }
+    taggingTable(decisionNonML[jet.globalIndex()], jetProb, scoreML[jet.globalIndex()]);
+  }
+  PROCESS_SWITCH(JetTaggerHFTask, processFillTablesMCD, "Fill Tables for tagging decision, jet probability, and ML score on charged jets in MC", false);
 };
 
 using JetTaggerHFDataCharged = JetTaggerHFTask<soa::Join<aod::ChargedJets, aod::ChargedJetConstituents>, aod::DataSecondaryVertex3ProngIndices, aod::DataSecondaryVertex3Prongs, aod::ChargedJetTags>;

@@ -116,32 +116,6 @@ bool isCHadron(int pc)
   return (std::find(bPdG.begin(), bPdG.end(), std::abs(pc)) != bPdG.end());
 }
 
-template <typename T, typename U, typename V = float>
-uint8_t setTaggingIPBit(T const& jet, U const& jtracks, V const& trackDcaXYMax, V const& trackDcaZMax, V const& tagPointForIP, int const& minIPCount)
-{
-  uint8_t bit = 0;
-  if (isGreatherTanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, false)) {
-    SETBIT(bit, TaggingMethodNonML::IPs);
-  }
-  if (isGreatherTanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, true)) {
-    SETBIT(bit, TaggingMethodNonML::IPs3D);
-  }
-  return bit;
-}
-
-template <typename T, typename U, typename V = float>
-uint8_t setTaggingSVBit(T const& jet, U const& prongs, V const& prongChi2PCAMax, V const& prongsigmaLxyMax, V const& svDispersionMax, V const& tagPointForSV)
-{
-  uint8_t bit = 0;
-  if(isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, false, tagPointForSV) {
-    SETBIT(bit, TaggingMethodNonML::SV);
-  }
-  if(isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, svDispersionMax, true, tagPointForSV) {
-    SETBIT(bit, TaggingMethodNonML::SV3D);
-  }
-  return bit;
-}
-
 /**
  * returns the globalIndex of the earliest mother of a particle in the shower. returns -1 if a suitable mother is not found
  *
@@ -522,7 +496,7 @@ int getGeoSign(T const& jet, U const& jtrack)
  * in a vector in descending order.
  */
 template <typename T, typename U, typename Vec = std::vector<float>>
-void orderForIPJetTracks(T const& jet, U const& /*jtracks*/, float const& trackDcaXYMax, float const& trackDcaZMax, Vec& vecSignImpSig, bool useIPxyz)
+void orderForIPJetTracks(T const& jet, U const& /*jtracks*/, float trackDcaXYMax, float trackDcaZMax, Vec& vecSignImpSig, bool useIPxyz)
 {
   for (auto const& jtrack : jet.template tracks_as<U>()) {
     if (!trackAcceptanceWithDca(jtrack, trackDcaXYMax, trackDcaZMax))
@@ -543,7 +517,7 @@ void orderForIPJetTracks(T const& jet, U const& /*jtracks*/, float const& trackD
  * Checks if a jet is greater than the given tagging working point based on the signed impact parameter significances
  */
 template <typename T, typename U>
-bool isGreaterThanTaggingPoint(T const& jet, U const& jtracks, float const& trackDcaXYMax, float const& trackDcaZMax, float const& taggingPoint = 1.0, int const& cnt = 1, bool useIPxyz = false)
+bool isGreaterThanTaggingPoint(T const& jet, U const& jtracks, float trackDcaXYMax, float trackDcaZMax, float taggingPoint = 1.0, int cnt = 1, bool useIPxyz = false)
 {
   if (cnt == 0) {
     return true; // untagged
@@ -595,7 +569,7 @@ std::unique_ptr<TF1> setResolutionFunction(T const& vecParams)
  *         impact parameter significance.
  */
 template <typename T, typename U>
-float getTrackProbability(T const& fResoFuncjet, U const& track, const float& minSignImpXYSig = -40)
+float getTrackProbability(T const& fResoFuncjet, U const& track, float minSignImpXYSig = -40)
 {
   float probTrack = 0;
   auto varSignImpXYSig = std::abs(track.dcaXY()) / track.sigmadcaXY();
@@ -625,11 +599,8 @@ float getTrackProbability(T const& fResoFuncjet, U const& track, const float& mi
  *         geometric sign.
  */
 template <typename T, typename U, typename V>
-float getJetProbability(T const& fResoFuncjet, U const& jet, V const& jtracks, float const& trackDcaXYMax, float const& trackDcaZMax, const int& cnt, const float& tagPoint = 1.0, const float& minSignImpXYSig = -10, bool useIPxy = true)
+float getJetProbability(T const& fResoFuncjet, U const& jet, V const& /*jtracks*/, float trackDcaXYMax, float trackDcaZMax, float minSignImpXYSig = -10)
 {
-  if (!(isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPoint, cnt, useIPxy)))
-    return -1;
-
   std::vector<float> jetTracksPt;
   float trackjetProb = 1.;
 
@@ -661,7 +632,7 @@ float getJetProbability(T const& fResoFuncjet, U const& jet, V const& jtracks, f
 
 // For secaondy vertex method utilites
 template <typename ProngType, typename JetType>
-typename ProngType::iterator jetFromProngMaxDecayLength(const JetType& jet, float const& prongChi2PCAMin, float const& prongChi2PCAMax, float const& prongsigmaLxyMax, float const& prongIPxyMin, float const& prongIPxyMax, const bool& doXYZ = false, bool* checkSv = nullptr)
+typename ProngType::iterator jetFromProngMaxDecayLength(const JetType& jet, float const& prongChi2PCAMin, float prongChi2PCAMax, float prongsigmaLxyMax, float prongIPxyMin, float prongIPxyMax, bool doXYZ = false, bool* checkSv = nullptr)
 {
   if (checkSv)
     *checkSv = false;
@@ -685,7 +656,7 @@ typename ProngType::iterator jetFromProngMaxDecayLength(const JetType& jet, floa
 }
 
 template <typename T, typename U>
-bool isTaggedJetSV(T const jet, U const& /*prongs*/, float const& prongChi2PCAMin, float const& prongChi2PCAMax, float const& prongsigmaLxyMax, float const& prongIPxyMin, float const& prongIPxyMax, float svDispersionMax, float const& doXYZ = false, float const& tagPointForSV = 15.)
+bool isTaggedJetSV(T const jet, U const& /*prongs*/, float prongChi2PCAMin, float prongChi2PCAMax, float prongsigmaLxyMax, float prongIPxyMin, float prongIPxyMax, float svDispersionMax, float doXYZ = false, float tagPointForSV = 15.)
 {
   bool checkSv = false;
   auto bjetCand = jetFromProngMaxDecayLength<U>(jet, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, prongIPxyMin, prongIPxyMax, doXYZ, &checkSv);
@@ -701,6 +672,32 @@ bool isTaggedJetSV(T const jet, U const& /*prongs*/, float const& prongChi2PCAMi
       return false;
   }
   return true;
+}
+
+template <typename T, typename U, typename V = float>
+uint8_t setTaggingIPBit(T const& jet, U const& jtracks, V trackDcaXYMax, V trackDcaZMax, V tagPointForIP, int minIPCount)
+{
+  uint8_t bit = 0;
+  if (isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, false)) {
+    SETBIT(bit, TaggingMethodNonML::IPs);
+  }
+  if (isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, true)) {
+    SETBIT(bit, TaggingMethodNonML::IPs3D);
+  }
+  return bit;
+}
+
+template <typename T, typename U, typename V = float>
+uint8_t setTaggingSVBit(T const& jet, U const& prongs, V prongChi2PCAMin, V prongChi2PCAMax, V prongsigmaLxyMax, float prongIPxyMin, float prongIPxyMax, V svDispersionMax, V tagPointForSV)
+{
+  uint8_t bit = 0;
+  if (isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, prongIPxyMin, prongIPxyMax, svDispersionMax, false, tagPointForSV)) {
+    SETBIT(bit, TaggingMethodNonML::SV);
+  }
+  if (isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, prongIPxyMin, prongIPxyMax, svDispersionMax, true, tagPointForSV)) {
+    SETBIT(bit, TaggingMethodNonML::SV3D);
+  }
+  return bit;
 }
 
 /**
