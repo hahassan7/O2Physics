@@ -44,9 +44,6 @@ enum JetTaggingSpecies {
   gluon = 5
 };
 
-namespace jettaggingutilities
-{
-
 enum TaggingMethodNonML {
   IPs = 0,
   IPs3D = 1,
@@ -54,6 +51,8 @@ enum TaggingMethodNonML {
   SV3D = 3
 };
 
+namespace jettaggingutilities
+{
 const int cmTomum = 10000; // using cm -> #mum for impact parameter (dca)
 
 struct BJetParams {
