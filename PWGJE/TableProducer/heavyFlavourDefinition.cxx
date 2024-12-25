@@ -59,7 +59,7 @@ struct HeavyFlavourDefinitionTask {
       flavourTableMCD(origin);
     }
   }
-  PROCESS_SWITCH(HeavyFlavourDefinitionTask, processMCD, "Fill definition of flavour for mcd jets", true);
+  PROCESS_SWITCH(HeavyFlavourDefinitionTask, processMCD, "Fill definition of flavour for mcd jets", false);
 
   void processMCDRun2(soa::Join<aod::JCollisions, aod::JCollisionPIs, aod::JMcCollisionLbs>::iterator const& collision, soa::Join<JetTableMCD, aod::ChargedMCDetectorLevelJetsMatchedToChargedMCParticleLevelJets> const& mcdjets, soa::Join<JetTableMCP, aod::ChargedMCParticleLevelJetsMatchedToChargedMCDetectorLevelJets> const& /*mcpjets*/, aod::JetParticles const& particles) // it used only for charged jets now
   {
@@ -85,7 +85,7 @@ struct HeavyFlavourDefinitionTask {
       flavourTableMCP(origin);
     }
   }
-  PROCESS_SWITCH(HeavyFlavourDefinitionTask, processMCP, "Fill definition of flavour for mcp jets", true);
+  PROCESS_SWITCH(HeavyFlavourDefinitionTask, processMCP, "Fill definition of flavour for mcp jets", false);
 
   void processMCPRun2(aod::JMcCollisions::iterator const& /*collision*/, JetTableMCP const& mcpjets, aod::JetParticles const& particles)
   {
@@ -103,15 +103,15 @@ struct HeavyFlavourDefinitionTask {
 };
 
 using JetHfDefinitionCharged = HeavyFlavourDefinitionTask<soa::Join<aod::ChargedMCDetectorLevelJets, aod::ChargedMCDetectorLevelJetConstituents>, soa::Join<aod::ChargedMCParticleLevelJets, aod::ChargedMCParticleLevelJetConstituents>, aod::ChargedMCDetectorLevelJetFlavourDef, aod::ChargedMCParticleLevelJetFlavourDef>;
-using JetHfDefinitionFull = HeavyFlavourDefinitionTask<soa::Join<aod::FullMCDetectorLevelJets, aod::FullMCDetectorLevelJetConstituents>, soa::Join<aod::FullMCParticleLevelJets, aod::FullMCParticleLevelJetConstituents>, aod::FullMCDetectorLevelJetFlavourDef, aod::FullMCParticleLevelJetFlavourDef>;
+// using JetHfDefinitionFull = HeavyFlavourDefinitionTask<soa::Join<aod::FullMCDetectorLevelJets, aod::FullMCDetectorLevelJetConstituents>, soa::Join<aod::FullMCParticleLevelJets, aod::FullMCParticleLevelJetConstituents>, aod::FullMCDetectorLevelJetFlavourDef, aod::FullMCParticleLevelJetFlavourDef>;
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
 
   std::vector<o2::framework::DataProcessorSpec> tasks;
 
-  tasks.emplace_back(adaptAnalysisTask<JetHfDefinitionCharged>(cfgc, SetDefaultProcesses{}, TaskName{"jet-hf-definition-charged"}));
-  tasks.emplace_back(adaptAnalysisTask<JetHfDefinitionFull>(cfgc, SetDefaultProcesses{}, TaskName{"jet-hf-definition-full"}));
+  tasks.emplace_back(adaptAnalysisTask<JetHfDefinitionCharged>(cfgc, SetDefaultProcesses{}, TaskName{"jet-hf-definition-charged"})); // o2-linter: disable=name/o2-task,name/workflow-file
+  // tasks.emplace_back(adaptAnalysisTask<JetHfDefinitionFull>(cfgc, SetDefaultProcesses{}, TaskName{"jet-hf-definition-full"}));
 
   return WorkflowSpec{tasks};
 }

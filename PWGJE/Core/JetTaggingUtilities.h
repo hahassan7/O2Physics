@@ -44,9 +44,6 @@ enum JetTaggingSpecies {
   gluon = 5
 };
 
-namespace jettaggingutilities
-{
-
 enum TaggingMethodNonML {
   IPs = 0,
   IPs3D = 1,
@@ -54,6 +51,8 @@ enum TaggingMethodNonML {
   SV3D = 3
 };
 
+namespace jettaggingutilities
+{
 const int cmTomum = 10000; // using cm -> #mum for impact parameter (dca)
 
 struct BJetParams {
@@ -711,7 +710,7 @@ template <typename AnyCollision, typename AnalysisJet, typename AnyTracks, typen
 int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyTracks const&, AnyParticles const& particles, AnyOriginalParticles const&, std::unordered_map<std::string, std::vector<int>>& trkLabels, bool searchUpToQuark, float vtxResParam = 0.01 /* 0.01cm = 100um */, float trackPtMin = 0.5)
 {
   const auto& tracks = jet.template tracks_as<AnyTracks>();
-  const int n_trks = tracks.size();
+  const int nTrks = tracks.size();
 
   // trkVtxIndex
 
@@ -725,32 +724,32 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
       tempTrkVtxIndex.push_back(i++);
   }
   tempTrkVtxIndex.push_back(i); // temporary index for PV
-  if (n_trks < 1) {             // the process should be done for n_trks == 1 as well
+  if (nTrks < 1) {              // the process should be done for nTrks == 1 as well
     trkLabels["trkVtxIndex"] = tempTrkVtxIndex;
-    return n_trks;
+    return nTrks;
   }
 
-  int n_pos = n_trks + 1;
-  std::vector<float> dists(n_pos * (n_pos - 1) / 2);
-  auto trk_pair_idx = [n_pos](int ti, int tj) {
-    if (ti == tj || ti >= n_pos || tj >= n_pos || ti < 0 || tj < 0) {
+  int nPos = nTrks + 1;
+  std::vector<float> dists(nPos * (nPos - 1) / 2);
+  auto trkPairIdx = [nPos](int ti, int tj) {
+    if (ti == tj || ti >= nPos || tj >= nPos || ti < 0 || tj < 0) {
       LOGF(info, "Track pair index out of range");
       return -1;
     } else {
-      return (ti < tj) ? (ti * n_pos - (ti * (ti + 1)) / 2 + tj - ti - 1) : (tj * n_pos - (tj * (tj + 1)) / 2 + ti - tj - 1);
+      return (ti < tj) ? (ti * nPos - (ti * (ti + 1)) / 2 + tj - ti - 1) : (tj * nPos - (tj * (tj + 1)) / 2 + ti - tj - 1);
     }
-  }; // index n_trks is for PV
+  }; // index nTrks is for PV
 
-  for (int ti = 0; ti < n_pos - 1; ti++)
-    for (int tj = ti + 1; tj < n_pos; tj++) {
+  for (int ti = 0; ti < nPos - 1; ti++)
+    for (int tj = ti + 1; tj < nPos; tj++) {
       std::array<float, 3> posi, posj;
 
-      if (tj < n_trks) {
+      if (tj < nTrks) {
         if (tracks[tj].has_mcParticle()) {
           const auto& pj = tracks[tj].template mcParticle_as<AnyParticles>().template mcParticle_as<AnyOriginalParticles>();
           posj = std::array<float, 3>{pj.vx(), pj.vy(), pj.vz()};
         } else {
-          dists[trk_pair_idx(ti, tj)] = std::numeric_limits<float>::max();
+          dists[trkPairIdx(ti, tj)] = std::numeric_limits<float>::max();
           continue;
         }
       } else {
@@ -761,24 +760,24 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
         const auto& pi = tracks[ti].template mcParticle_as<AnyParticles>().template mcParticle_as<AnyOriginalParticles>();
         posi = std::array<float, 3>{pi.vx(), pi.vy(), pi.vz()};
       } else {
-        dists[trk_pair_idx(ti, tj)] = std::numeric_limits<float>::max();
+        dists[trkPairIdx(ti, tj)] = std::numeric_limits<float>::max();
         continue;
       }
 
-      dists[trk_pair_idx(ti, tj)] = RecoDecay::distance(posi, posj);
+      dists[trkPairIdx(ti, tj)] = RecoDecay::distance(posi, posj);
     }
 
   int clusteri = -1, clusterj = -1;
-  float min_min_dist = -1.f; // If there is an not-merge-able min_dist pair, check the 2nd-min_dist pair.
+  float minMinDist = -1.f; // If there is an not-merge-able minDist pair, check the 2nd-minDist pair.
   while (true) {
 
-    float min_dist = -1.f; // Get min_dist pair
-    for (int ti = 0; ti < n_pos - 1; ti++)
-      for (int tj = ti + 1; tj < n_pos; tj++)
+    float minDist = -1.f; // Get minDist pair
+    for (int ti = 0; ti < nPos - 1; ti++)
+      for (int tj = ti + 1; tj < nPos; tj++)
         if (tempTrkVtxIndex[ti] != tempTrkVtxIndex[tj] && tempTrkVtxIndex[ti] >= 0 && tempTrkVtxIndex[tj] >= 0) {
-          float dist = dists[trk_pair_idx(ti, tj)];
-          if ((dist < min_dist || min_dist < 0.f) && dist > min_min_dist) {
-            min_dist = dist;
+          float dist = dists[trkPairIdx(ti, tj)];
+          if ((dist < minDist || minDist < 0.f) && dist > minMinDist) {
+            minDist = dist;
             clusteri = ti;
             clusterj = tj;
           }
@@ -787,59 +786,59 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
       break;
 
     bool mrg = true; // Merge-ability check
-    for (int ti = 0; ti < n_pos && mrg; ti++)
+    for (int ti = 0; ti < nPos && mrg; ti++)
       if (tempTrkVtxIndex[ti] == tempTrkVtxIndex[clusteri] && tempTrkVtxIndex[ti] >= 0) {
-        for (int tj = 0; tj < n_pos && mrg; tj++)
+        for (int tj = 0; tj < nPos && mrg; tj++)
           if (tj != ti && tempTrkVtxIndex[tj] == tempTrkVtxIndex[clusterj] && tempTrkVtxIndex[tj] >= 0) {
-            if (dists[trk_pair_idx(ti, tj)] > vtxResParam) { // If there is more distant pair compared to vtx_res between two clusters, they cannot be merged.
+            if (dists[trkPairIdx(ti, tj)] > vtxResParam) { // If there is more distant pair compared to vtx_res between two clusters, they cannot be merged.
               mrg = false;
-              min_min_dist = min_dist;
+              minMinDist = minDist;
             }
           }
       }
-    if (min_dist > vtxResParam || min_dist < 0.f)
+    if (minDist > vtxResParam || minDist < 0.f)
       break;
 
     if (mrg) { // Merge two clusters
-      int old_index = tempTrkVtxIndex[clusterj];
-      for (int t = 0; t < n_pos; t++)
-        if (tempTrkVtxIndex[t] == old_index)
+      int oldIndex = tempTrkVtxIndex[clusterj];
+      for (int t = 0; t < nPos; t++)
+        if (tempTrkVtxIndex[t] == oldIndex)
           tempTrkVtxIndex[t] = tempTrkVtxIndex[clusteri];
     }
   }
 
-  int n_vertices = 0;
+  int nVertices = 0;
 
   // Sort the indices from PV (as 0) to the most distant SV (as 1~).
-  int idxPV = tempTrkVtxIndex[n_trks];
-  for (int t = 0; t < n_trks; t++)
+  int idxPV = tempTrkVtxIndex[nTrks];
+  for (int t = 0; t < nTrks; t++)
     if (tempTrkVtxIndex[t] == idxPV) {
       tempTrkVtxIndex[t] = -2;
-      n_vertices = 1; // There is a track originating from PV
+      nVertices = 1; // There is a track originating from PV
     }
 
   std::unordered_map<int, float> avgDistances;
   std::unordered_map<int, int> count;
-  for (int t = 0; t < n_trks; t++) {
+  for (int t = 0; t < nTrks; t++) {
     if (tempTrkVtxIndex[t] >= 0) {
-      avgDistances[tempTrkVtxIndex[t]] += dists[trk_pair_idx(t, n_trks)];
+      avgDistances[tempTrkVtxIndex[t]] += dists[trkPairIdx(t, nTrks)];
       count[tempTrkVtxIndex[t]]++;
     }
   }
 
-  trkLabels["trkVtxIndex"] = std::vector<int>(n_trks, -1);
-  if (count.size() != 0) { // If there is any SV cluster not only PV cluster
-    for (auto& [idx, avgDistance] : avgDistances)
+  trkLabels["trkVtxIndex"] = std::vector<int>(nTrks, -1);
+  if (count.size() != 0) {                        // If there is any SV cluster not only PV cluster
+    for (auto& [idx, avgDistance] : avgDistances) // o2-linter: disable=const-ref-in-for-loop
       avgDistance /= count[idx];
 
-    n_vertices += avgDistances.size();
+    nVertices += avgDistances.size();
 
     std::vector<std::pair<int, float>> sortedIndices(avgDistances.begin(), avgDistances.end());
     std::sort(sortedIndices.begin(), sortedIndices.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
     int rank = 1;
     for (auto const& [idx, avgDistance] : sortedIndices) {
       bool found = false;
-      for (int t = 0; t < n_trks; t++)
+      for (int t = 0; t < nTrks; t++)
         if (tempTrkVtxIndex[t] == idx) {
           trkLabels["trkVtxIndex"][t] = rank;
           found = true;
@@ -848,7 +847,7 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
     }
   }
 
-  for (int t = 0; t < n_trks; t++)
+  for (int t = 0; t < nTrks; t++)
     if (tempTrkVtxIndex[t] == -2)
       trkLabels["trkVtxIndex"][t] = 0;
 
@@ -868,7 +867,7 @@ int vertexClustering(AnyCollision const& collision, AnalysisJet const& jet, AnyT
     trkIdx++;
   }
 
-  return n_vertices;
+  return nVertices;
 }
 
 std::vector<std::vector<float>> getInputsForML(BJetParams jetparams, std::vector<BJetTrackParams>& tracksParams, std::vector<BJetSVParams>& svsParams, int maxJetConst = 10)
