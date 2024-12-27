@@ -129,15 +129,15 @@ JETSV_TABLES_DEF(Charged, SecondaryVertex2Prong, "2PRONG");
   }                                                                \
   DECLARE_SOA_TABLE(_jet_type_##FlavourDef, "AOD", _description_ "FlavourDef", _name_##flavourdef::Origin);
 
-#define JETTAGGING_TABLE_DEF(_jet_type_, _name_, _description_)                                                                          \
-  namespace _name_##tagging                                                                                                              \
-  {                                                                                                                                      \
-    DECLARE_SOA_COLUMN(BitTaggedjetNonML, bitTaggedjetNonML, uint8_t);                                                                   \
-    DECLARE_SOA_COLUMN(JetProb, jetProb, float);                                                                                         \
-    DECLARE_SOA_COLUMN(ScoreML, scoreML, float);                                                                                         \
-    DECLARE_SOA_DYNAMIC_COLUMN(IsTagged, isTagged, [](uint8_t bit, TaggingMethodNonML method) -> bool { return TESTBIT(bit, method); }); \
-  }                                                                                                                                      \
-  DECLARE_SOA_TABLE(_jet_type_##Tags, "AOD", _description_ "Tags", _name_##tagging::BitTaggedjetNonML, _name_##tagging::JetProb, _name_##tagging::ScoreML, _name_##tagging::IsTagged<_name_##tagging::BitTaggedjetNonML>);
+#define JETTAGGING_TABLE_DEF(_jet_type_, _name_, _description_)                                                                         \
+  namespace _name_##tagging                                                                                                             \
+  {                                                                                                                                     \
+    DECLARE_SOA_COLUMN(BitTaggedjet, bitTaggedjet, uint8_t);                                                                            \
+    DECLARE_SOA_COLUMN(JetProb, jetProb, float);                                                                                        \
+    DECLARE_SOA_COLUMN(ScoreML, scoreML, float);                                                                                        \
+    DECLARE_SOA_DYNAMIC_COLUMN(IsTagged, isTagged, [](uint8_t bit, BJetTaggingMethod method) -> bool { return TESTBIT(bit, method); }); \
+  }                                                                                                                                     \
+  DECLARE_SOA_TABLE(_jet_type_##Tags, "AOD", _description_ "Tags", _name_##tagging::BitTaggedjet, _name_##tagging::JetProb, _name_##tagging::ScoreML, _name_##tagging::IsTagged<_name_##tagging::BitTaggedjet>);
 
 #define JETTAGGING_TABLES_DEF(_jet_type_, _description_)                                                       \
   JETTAGGING_TABLE_DEF(_jet_type_##Jet, _jet_type_##jet, _description_)                                        \

@@ -44,11 +44,13 @@ enum JetTaggingSpecies {
   gluon = 5
 };
 
-enum TaggingMethodNonML {
-  IPs = 0,
-  IPs3D = 1,
-  SV = 2,
-  SV3D = 3
+enum BJetTaggingMethod {
+  IPsN2 = 0,
+  IPsN3 = 1,
+  IPs3DN2 = 2,
+  IPs3DN3 = 3,
+  SV = 4,
+  SV3D = 5
 };
 
 namespace jettaggingutilities
@@ -443,20 +445,16 @@ bool prongAcceptance(T const& prong, float prongChi2PCAMin, float prongChi2PCAMa
     return false;
   if (prong.chi2PCA() > prongChi2PCAMax)
     return false;
+  if (std::abs(prong.impactParameterXY()) < prongIPxyMin)
+    return false;
+  if (std::abs(prong.impactParameterXY()) > prongIPxyMax)
+    return false;
+
   if (!doXYZ) {
     if (prong.errorDecayLengthXY() > prongsigmaLxyMax)
       return false;
-    if (std::abs(prong.impactParameterXY()) < prongIPxyMin)
-      return false;
-    if (std::abs(prong.impactParameterXY()) > prongIPxyMax)
-      return false;
   } else {
     if (prong.errorDecayLength() > prongsigmaLxyMax)
-      return false;
-    // TODO
-    if (std::abs(prong.impactParameterXY()) < prongIPxyMin)
-      return false;
-    if (std::abs(prong.impactParameterXY()) > prongIPxyMax)
       return false;
   }
   return true;
@@ -514,25 +512,26 @@ void orderForIPJetTracks(T const& jet, U const& /*jtracks*/, float trackDcaXYMax
 
 /**
  * Checks if a jet is greater than the given tagging working point based on the signed impact parameter significances
+ * return (true, true) if the jet is tagged by the 2nd and 3rd largest IPs
  */
 template <typename T, typename U>
-bool isGreaterThanTaggingPoint(T const& jet, U const& jtracks, float trackDcaXYMax, float trackDcaZMax, float taggingPoint = 1.0, int cnt = 1, bool useIPxyz = false)
+std::tuple<bool, bool> isGreaterThanTaggingPoint(T const& jet, U const& jtracks, float trackDcaXYMax, float trackDcaZMax, float taggingPoint = 1.0, bool useIPxyz = false)
 {
-  if (cnt == 0) {
-    return true; // untagged
-  }
+  bool taggedIPsN2 = false;
+  bool taggedIPsN3 = false;
   std::vector<float> vecSignImpSig;
   orderForIPJetTracks(jet, jtracks, trackDcaXYMax, trackDcaZMax, vecSignImpSig, useIPxyz);
-  if (vecSignImpSig.size() > static_cast<std::vector<float>::size_type>(cnt) - 1) {
-    for (int i = 0; i < cnt; i++) {
-      if (vecSignImpSig[i] < taggingPoint) { // tagger point set
-        return false;
-      }
+  if (vecSignImpSig.size() > 1) {
+    if (vecSignImpSig[1] > taggingPoint) { // tagger point set
+      taggedIPsN2 = true;
     }
-  } else {
-    return false;
   }
-  return true;
+  if (vecSignImpSig.size() > 2) {
+    if (vecSignImpSig[2] > taggingPoint) { // tagger point set
+      taggedIPsN3 = true;
+    }
+  }
+  return std::make_tuple(taggedIPsN2, taggedIPsN3);
 }
 
 /**
@@ -648,6 +647,7 @@ typename ProngType::iterator jetFromProngMaxDecayLength(const JetType& jet, floa
       sxy = prong.decayLength() / prong.errorDecayLength();
     }
     if (maxSxy < sxy) {
+      maxSxy = sxy;
       bjetCand = prong;
     }
   }
@@ -674,14 +674,23 @@ bool isTaggedJetSV(T const jet, U const& /*prongs*/, float prongChi2PCAMin, floa
 }
 
 template <typename T, typename U, typename V = float>
-uint8_t setTaggingIPBit(T const& jet, U const& jtracks, V trackDcaXYMax, V trackDcaZMax, V tagPointForIP, int minIPCount)
+uint8_t setTaggingIPBit(T const& jet, U const& jtracks, V trackDcaXYMax, V trackDcaZMax, V tagPointForIP)
 {
   uint8_t bit = 0;
-  if (isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, false)) {
-    SETBIT(bit, TaggingMethodNonML::IPs);
+  auto [taggedIPsN2, taggedIPsN3] = isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, false);
+  if (taggedIPsN2) {
+    SETBIT(bit, BJetTaggingMethod::IPsN2);
   }
-  if (isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, minIPCount, true)) {
-    SETBIT(bit, TaggingMethodNonML::IPs3D);
+  if (taggedIPsN3) {
+    SETBIT(bit, BJetTaggingMethod::IPsN3);
+  }
+
+  auto [taggedIPs3DN2, taggedIPs3DN3] = isGreaterThanTaggingPoint(jet, jtracks, trackDcaXYMax, trackDcaZMax, tagPointForIP, true);
+  if (taggedIPs3DN2) {
+    SETBIT(bit, BJetTaggingMethod::IPs3DN2);
+  }
+  if (taggedIPs3DN3) {
+    SETBIT(bit, BJetTaggingMethod::IPs3DN3);
   }
   return bit;
 }
@@ -691,10 +700,10 @@ uint8_t setTaggingSVBit(T const& jet, U const& prongs, V prongChi2PCAMin, V pron
 {
   uint8_t bit = 0;
   if (isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, prongIPxyMin, prongIPxyMax, svDispersionMax, false, tagPointForSV)) {
-    SETBIT(bit, TaggingMethodNonML::SV);
+    SETBIT(bit, BJetTaggingMethod::SV);
   }
   if (isTaggedJetSV(jet, prongs, prongChi2PCAMin, prongChi2PCAMax, prongsigmaLxyMax, prongIPxyMin, prongIPxyMax, svDispersionMax, true, tagPointForSV)) {
-    SETBIT(bit, TaggingMethodNonML::SV3D);
+    SETBIT(bit, BJetTaggingMethod::SV3D);
   }
   return bit;
 }

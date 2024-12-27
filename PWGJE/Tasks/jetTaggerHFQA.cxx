@@ -81,7 +81,7 @@ struct JetTaggerHFQA {
   ConfigurableAxis binJetFlavour{"binJetFlavour", {6, -0.5, 5.5}, ""};
   ConfigurableAxis binJetPt{"binJetPt", {200, 0., 200.}, ""};
   ConfigurableAxis binEta{"binEta", {100, -1.f, 1.f}, ""};
-  ConfigurableAxis binPhi{"binPhi", {18 * 8, 0.f, 2. * TMath::Pi()}, ""};
+  ConfigurableAxis binPhi{"binPhi", {18 * 8, 0.f, 2. * M_PI}, ""};
   ConfigurableAxis binNtracks{"binNtracks", {100, 0., 100.}, ""};
   ConfigurableAxis binTrackPt{"binTrackPt", {200, 0.f, 100.f}, ""};
   ConfigurableAxis binImpactParameterXY{"binImpactParameterXY", {801, -400.5f, 400.5f}, ""};
@@ -810,11 +810,11 @@ struct JetTaggerHFQA {
     registry.fill(HIST("h2_jet_pt_JP"), jet.pt(), jet.jetProb());
     registry.fill(HIST("h2_jet_pt_neg_log_JP"), jet.pt(), -1 * std::log(jet.jetProb()));
     // registry.fill(HIST("h2_jet_pt_JP_N1"), jet.pt(), jet.jetProb()[1]);
-    // registry.fill(HIST("h2_jet_pt_neg_log_JP_N1"), jet.pt(), -1 * TMath::Log(jet.jetProb()[1]));
-    // registry.fill(HIST("h2_jet_pt_JP_N2"), jet.pt(), jet.jetProb()[2]);
-    // registry.fill(HIST("h2_jet_pt_neg_log_JP_N2"), jet.pt(), -1 * TMath::Log(jet.jetProb()[2]));
-    // registry.fill(HIST("h2_jet_pt_JP_N3"), jet.pt(), jet.jetProb()[3]);
-    // registry.fill(HIST("h2_jet_pt_neg_log_JP_N3"), jet.pt(), -1 * TMath::Log(jet.jetProb()[3]));
+    // registry.fill(HIST("h2_jet_pt_neg_log_JP_N1"), jet.pt(), -1 * std::log(jet.jetProb()[1]));
+    registry.fill(HIST("h2_jet_pt_JP_N2"), jet.pt(), jet.isTagged(BJetTaggingMethod::IPsN2) ? jet.jetProb() : -1);
+    registry.fill(HIST("h2_jet_pt_neg_log_JP_N2"), jet.pt(), jet.isTagged(BJetTaggingMethod::IPsN2) ? -1 * std::log(jet.jetProb()) : -1);
+    registry.fill(HIST("h2_jet_pt_JP_N3"), jet.pt(), jet.isTagged(BJetTaggingMethod::IPsN3) ? jet.jetProb() : -1);
+    registry.fill(HIST("h2_jet_pt_neg_log_JP_N3"), jet.pt(), jet.isTagged(BJetTaggingMethod::IPsN3) ? -1 * std::log(jet.jetProb()) : -1);
   }
 
   template <typename T>
@@ -825,13 +825,13 @@ struct JetTaggerHFQA {
       return;
     }
     registry.fill(HIST("h3_jet_pt_JP_flavour"), mcdjet.pt(), mcdjet.jetProb(), mcdjet.origin(), eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()), mcdjet.origin(), eventWeight);
+    registry.fill(HIST("h3_jet_pt_neg_log_JP_flavour"), mcdjet.pt(), -1 * std::log(mcdjet.jetProb()), mcdjet.origin(), eventWeight);
     // registry.fill(HIST("h3_jet_pt_JP_N1_flavour"), mcdjet.pt(), mcdjet.jetProb()[1], mcdjet.origin(), eventWeight);
-    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N1_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[1]), mcdjet.origin(), eventWeight);
-    // registry.fill(HIST("h3_jet_pt_JP_N2_flavour"), mcdjet.pt(), mcdjet.jetProb()[2], mcdjet.origin(), eventWeight);
-    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N2_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[2]), mcdjet.origin(), eventWeight);
-    // registry.fill(HIST("h3_jet_pt_JP_N3_flavour"), mcdjet.pt(), mcdjet.jetProb()[3], mcdjet.origin(), eventWeight);
-    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N3_flavour"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[3]), mcdjet.origin(), eventWeight);
+    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N1_flavour"), mcdjet.pt(), -1 * std::log(mcdjet.jetProb()[1]), mcdjet.origin(), eventWeight);
+    registry.fill(HIST("h3_jet_pt_JP_N2_flavour"), mcdjet.pt(), mcdjet.isTagged(BJetTaggingMethod::IPsN2) ? mcdjet.jetProb() : -1, mcdjet.origin(), eventWeight);
+    registry.fill(HIST("h3_jet_pt_neg_log_JP_N2_flavour"), mcdjet.pt(), mcdjet.isTagged(BJetTaggingMethod::IPsN2) ? -1 * std::log(mcdjet.jetProb()) : -1, mcdjet.origin(), eventWeight);
+    registry.fill(HIST("h3_jet_pt_JP_N3_flavour"), mcdjet.pt(), mcdjet.isTagged(BJetTaggingMethod::IPsN3) ? mcdjet.jetProb() : -1, mcdjet.origin(), eventWeight);
+    registry.fill(HIST("h3_jet_pt_neg_log_JP_N3_flavour"), mcdjet.pt(), mcdjet.isTagged(BJetTaggingMethod::IPsN3) ? -1 * std::log(mcdjet.jetProb()) : -1, mcdjet.origin(), eventWeight);
   }
 
   template <typename T, typename U, typename V>
@@ -851,13 +851,13 @@ struct JetTaggerHFQA {
     if (jetflavourRun2Def < 0)
       return;
     registry.fill(HIST("h3_jet_pt_JP_flavour_run2"), mcdjet.pt(), mcdjet.jetProb(), jetflavourRun2Def, eventWeight);
-    registry.fill(HIST("h3_jet_pt_neg_log_JP_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()), jetflavourRun2Def, eventWeight);
+    registry.fill(HIST("h3_jet_pt_neg_log_JP_flavour_run2"), mcdjet.pt(), -1 * std::log(mcdjet.jetProb()), jetflavourRun2Def, eventWeight);
     // registry.fill(HIST("h3_jet_pt_JP_N1_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[1], jetflavourRun2Def, eventWeight);
-    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N1_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[1]), jetflavourRun2Def, eventWeight);
-    // registry.fill(HIST("h3_jet_pt_JP_N2_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[2], jetflavourRun2Def, eventWeight);
-    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N2_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[2]), jetflavourRun2Def, eventWeight);
-    // registry.fill(HIST("h3_jet_pt_JP_N3_flavour_run2"), mcdjet.pt(), mcdjet.jetProb()[3], jetflavourRun2Def, eventWeight);
-    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N3_flavour_run2"), mcdjet.pt(), -1 * TMath::Log(mcdjet.jetProb()[3]), jetflavourRun2Def, eventWeight);
+    // registry.fill(HIST("h3_jet_pt_neg_log_JP_N1_flavour_run2"), mcdjet.pt(), -1 * std::log(mcdjet.jetProb()[1]), jetflavourRun2Def, eventWeight);
+    registry.fill(HIST("h3_jet_pt_JP_N2_flavour_run2"), mcdjet.pt(), mcdjet.isTagged(BJetTaggingMethod::IPsN2) ? mcdjet.jetProb() : -1, jetflavourRun2Def, eventWeight);
+    registry.fill(HIST("h3_jet_pt_neg_log_JP_N2_flavour_run2"), mcdjet.pt(), mcdjet.isTagged(BJetTaggingMethod::IPsN2) ? -1 * std::log(mcdjet.jetProb()) : -1, jetflavourRun2Def, eventWeight);
+    registry.fill(HIST("h3_jet_pt_JP_N3_flavour_run2"), mcdjet.pt(), mcdjet.isTagged(BJetTaggingMethod::IPsN3) ? mcdjet.jetProb() : -1, jetflavourRun2Def, eventWeight);
+    registry.fill(HIST("h3_jet_pt_neg_log_JP_N3_flavour_run2"), mcdjet.pt(), mcdjet.isTagged(BJetTaggingMethod::IPsN3) ? -1 * std::log(mcdjet.jetProb()) : -1, jetflavourRun2Def, eventWeight);
   }
 
   template <typename T, typename U>
@@ -892,7 +892,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h2_jet_pt_2prong_Sxy_N1"), jet.pt(), maxSxy);
       registry.fill(HIST("h2_jet_pt_2prong_mass_N1"), jet.pt(), massSV);
-      if (jet.isTagged(TaggingMethodNonML::SV)) {
+      if (jet.isTagged(BJetTaggingMethod::SV)) {
         registry.fill(HIST("h2_taggedjet_pt_2prong_Sxy_N1"), jet.pt(), maxSxy);
         registry.fill(HIST("h2_taggedjet_pt_2prong_mass_N1"), jet.pt(), massSV);
       }
@@ -903,7 +903,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h2_jet_pt_2prong_Sxyz_N1"), jet.pt(), maxSxyz);
       registry.fill(HIST("h2_jet_pt_2prong_mass_xyz_N1"), jet.pt(), massSV);
-      if (jet.isTagged(TaggingMethodNonML::SV3D)) {
+      if (jet.isTagged(BJetTaggingMethod::SV3D)) {
         registry.fill(HIST("h2_taggedjet_pt_2prong_Sxyz_N1"), jet.pt(), maxSxyz);
         registry.fill(HIST("h2_taggedjet_pt_2prong_mass_xyz_N1"), jet.pt(), massSV);
       }
@@ -942,7 +942,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h2_jet_pt_3prong_Sxy_N1"), jet.pt(), maxSxy);
       registry.fill(HIST("h2_jet_pt_3prong_mass_N1"), jet.pt(), massSV);
-      if (jet.isTagged(TaggingMethodNonML::SV)) {
+      if (jet.isTagged(BJetTaggingMethod::SV)) {
         registry.fill(HIST("h2_taggedjet_pt_3prong_Sxy_N1"), jet.pt(), maxSxy);
         registry.fill(HIST("h2_taggedjet_pt_3prong_mass_N1"), jet.pt(), massSV);
       }
@@ -953,7 +953,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h2_jet_pt_3prong_Sxyz_N1"), jet.pt(), maxSxyz);
       registry.fill(HIST("h2_jet_pt_3prong_mass_xyz_N1"), jet.pt(), massSV);
-      if (jet.isTagged(TaggingMethodNonML::SV3D)) {
+      if (jet.isTagged(BJetTaggingMethod::SV3D)) {
         registry.fill(HIST("h2_taggedjet_pt_3prong_Sxyz_N1"), jet.pt(), maxSxyz);
         registry.fill(HIST("h2_taggedjet_pt_3prong_mass_xyz_N1"), jet.pt(), massSV);
       }
@@ -992,7 +992,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_2prong_Sxy_N1_flavour"), mcdjet.pt(), maxSxy, origin, eventWeight);
       registry.fill(HIST("h3_jet_pt_2prong_mass_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
-      if (mcdjet.isTagged(TaggingMethodNonML::SV)) {
+      if (mcdjet.isTagged(BJetTaggingMethod::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_2prong_Sxy_N1_flavour"), mcdjet.pt(), maxSxy, origin, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_2prong_mass_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
       }
@@ -1003,7 +1003,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h3_jet_pt_2prong_Sxyz_N1_flavour"), mcdjet.pt(), maxSxyz, origin, eventWeight);
       registry.fill(HIST("h3_jet_pt_2prong_mass_xyz_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
-      if (mcdjet.isTagged(TaggingMethodNonML::SV3D)) {
+      if (mcdjet.isTagged(BJetTaggingMethod::SV3D)) {
         registry.fill(HIST("h3_taggedjet_pt_2prong_Sxyz_N1_flavour"), mcdjet.pt(), maxSxyz, origin, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_2prong_mass_xyz_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
       }
@@ -1044,7 +1044,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_2prong_Sxy_N1_flavour_run2"), mcdjet.pt(), maxSxy, jetflavourRun2Def, eventWeight);
       registry.fill(HIST("h3_jet_pt_2prong_mass_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
-      if (mcdjet.isTagged(TaggingMethodNonML::SV)) {
+      if (mcdjet.isTagged(BJetTaggingMethod::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_2prong_Sxy_N1_flavour_run2"), mcdjet.pt(), maxSxy, jetflavourRun2Def, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_2prong_mass_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
       }
@@ -1055,7 +1055,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h3_jet_pt_2prong_Sxyz_N1_flavour_run2"), mcdjet.pt(), maxSxyz, jetflavourRun2Def, eventWeight);
       registry.fill(HIST("h3_jet_pt_2prong_mass_xyz_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
-      if (mcdjet.isTagged(TaggingMethodNonML::SV3D)) {
+      if (mcdjet.isTagged(BJetTaggingMethod::SV3D)) {
         registry.fill(HIST("h3_taggedjet_pt_2prong_Sxyz_N1_flavour_run2"), mcdjet.pt(), maxSxyz, jetflavourRun2Def, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_2prong_mass_xyz_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
       }
@@ -1095,7 +1095,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_3prong_Sxy_N1_flavour"), mcdjet.pt(), maxSxy, origin, eventWeight);
       registry.fill(HIST("h3_jet_pt_3prong_mass_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
-      if (mcdjet.isTagged(TaggingMethodNonML::SV)) {
+      if (mcdjet.isTagged(BJetTaggingMethod::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_3prong_Sxy_N1_flavour"), mcdjet.pt(), maxSxy, origin, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_3prong_mass_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
       }
@@ -1106,7 +1106,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCandXYZ.m();
       registry.fill(HIST("h3_jet_pt_3prong_Sxyz_N1_flavour"), mcdjet.pt(), maxSxyz, origin, eventWeight);
       registry.fill(HIST("h3_jet_pt_3prong_mass_xyz_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
-      if (mcdjet.isTagged(TaggingMethodNonML::SV)) {
+      if (mcdjet.isTagged(BJetTaggingMethod::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_3prong_Sxyz_N1_flavour"), mcdjet.pt(), maxSxyz, origin, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_3prong_mass_xyz_N1_flavour"), mcdjet.pt(), massSV, origin, eventWeight);
       }
@@ -1149,7 +1149,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_3prong_Sxy_N1_flavour_run2"), mcdjet.pt(), maxSxy, jetflavourRun2Def, eventWeight);
       registry.fill(HIST("h3_jet_pt_3prong_mass_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
-      if (mcdjet.isTagged(TaggingMethodNonML::SV)) {
+      if (mcdjet.isTagged(BJetTaggingMethod::SV)) {
         registry.fill(HIST("h3_taggedjet_pt_3prong_Sxy_N1_flavour_run2"), mcdjet.pt(), maxSxy, jetflavourRun2Def, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_3prong_mass_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
       }
@@ -1160,7 +1160,7 @@ struct JetTaggerHFQA {
       auto massSV = bjetCand.m();
       registry.fill(HIST("h3_jet_pt_3prong_Sxyz_N1_flavour_run2"), mcdjet.pt(), maxSxyz, jetflavourRun2Def, eventWeight);
       registry.fill(HIST("h3_jet_pt_3prong_mass_xyz_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
-      if (mcdjet.isTagged(TaggingMethodNonML::SV3D)) {
+      if (mcdjet.isTagged(BJetTaggingMethod::SV3D)) {
         registry.fill(HIST("h3_taggedjet_pt_3prong_Sxyz_N1_flavour_run2"), mcdjet.pt(), maxSxyz, jetflavourRun2Def, eventWeight);
         registry.fill(HIST("h3_taggedjet_pt_3prong_mass_xyz_N1_flavour_run2"), mcdjet.pt(), massSV, jetflavourRun2Def, eventWeight);
       }
